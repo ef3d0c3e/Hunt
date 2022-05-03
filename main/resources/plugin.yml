@@ -1,0 +1,60 @@
+name: Hunt
+version: 3.5
+author: ef3d0c3e
+main: org.ef3d0c3e.hunt.Hunt
+api-version: 1.18
+load: startup
+depend:
+  - CrazyAdvancementsAPI
+  - AdvancedWorldCreatorAPI
+  - ProtocolLib
+commands:
+  hunt:
+    description: Commande principale du hunt
+    permission: hunt.manage
+    usage: /<command> <section>
+    aliases: h
+  info:
+    description: Affiche les informations sur la partie
+    usage: /<command>
+  help:
+    description: Affiche l'aide
+    usage: /<command>
+  changelog:
+    description: Affiche les changements
+    usage: /<command>
+    aliases: ch
+  kit:
+    description: Affiche les kits
+    usage: /<command>
+  kititems:
+    description: Affiche les items des kits
+    permission: hunt.manage
+    usage: /<command> <page>
+  kitinfo:
+    description: Affiche la description d'un kit
+    usage: /<command> <kit>
+  addteam:
+    description: Ajoute une équipe
+    permission: hunt.manage
+    usage: /<command>
+  delteam:
+    description: Supprime une équipe
+    permission: hunt.manage
+    usage: /<command> <team>
+  join:
+    description: Rejoint une équipe
+    usage: /<command> <team>
+  compass:
+    description: Affiche le craft du Traqueur
+    usage: /<command>
+  inv:
+    description: Affiche l'inventaire d'un joueur
+    usage: /<command> <player>
+  cibles:
+    description: Affiche le roulement des cibles
+    usage: /<command>
+  accessoires:
+    description: Affiche le menu des accessoires
+    usage: /<command>
+    aliases: acc

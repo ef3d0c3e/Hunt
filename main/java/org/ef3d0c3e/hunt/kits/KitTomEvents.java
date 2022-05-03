@@ -1,0 +1,274 @@
+package org.ef3d0c3e.hunt.kits;
+
+import org.bukkit.*;
+import org.bukkit.entity.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.EulerAngle;
+import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.Hunt;
+import org.ef3d0c3e.hunt.Util;
+import org.ef3d0c3e.hunt.game.Game;
+import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.player.HuntPlayer;
+
+public class KitTomEvents implements Listener
+{
+	/**
+	 * Spawns a flying carpet
+	 * @param ev Event
+	 */
+	@EventHandler
+	public void onRightClick(PlayerInteractEvent ev)
+	{
+		if (ev.getAction() != Action.RIGHT_CLICK_AIR && ev.getAction() != Action.RIGHT_CLICK_BLOCK)
+			return;
+		if (ev.getItem() == null || !ev.getItem().isSimilar(KitTom.magicCarpet))
+			return;
+		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+			return;
+
+		// Stop if clicking an inventory
+		if (!hp.getPlayer().isSneaking() && ev.getAction() == Action.RIGHT_CLICK_BLOCK &&
+			Util.containsMaterial(Util.rightClickableBlocks, ev.getClickedBlock().getType()))
+			return;
+
+		ev.setCancelled(true);
+		ev.getItem().setAmount(ev.getItem().getAmount()-1);
+
+		final Vector speed = new Vector(0.60, 0.65, 0.60); // Speed in blocks/ticks
+
+		// Carpet
+		ArmorStand carpet = (ArmorStand)hp.getPlayer().getLocation().getWorld().spawnEntity(hp.getPlayer().getLocation(), EntityType.ARMOR_STAND);
+		carpet.setInvisible(true);
+		carpet.setInvulnerable(true);
+		carpet.setSilent(true);
+		carpet.addPassenger(hp.getPlayer());
+		carpet.getEquipment().setItemInMainHand(KitTom.magicCarpetModel);
+		carpet.addEquipmentLock(EquipmentSlot.FEET, ArmorStand.LockType.ADDING_OR_CHANGING);
+		carpet.addEquipmentLock(EquipmentSlot.LEGS, ArmorStand.LockType.ADDING_OR_CHANGING);
+		carpet.addEquipmentLock(EquipmentSlot.CHEST, ArmorStand.LockType.ADDING_OR_CHANGING);
+		carpet.addEquipmentLock(EquipmentSlot.HAND, ArmorStand.LockType.REMOVING_OR_CHANGING);
+
+		hp.getPlayer().playSound(carpet.getLocation(), "hunt.jojo.awake", SoundCategory.MASTER, 65536.f, 1.f);
+
+		new BukkitRunnable()
+		{
+			int ticks = 0;
+
+			@Override
+			public void run()
+			{
+				if (Game.isPaused() || ticks == 400 || !carpet.getPassengers().contains(hp.getPlayer()))
+				{
+					this.cancel();
+					// Remove carpet
+					new BukkitRunnable()
+					{
+						@Override
+						public void run()
+						{
+							if (carpet != null && !carpet.isDead())
+								carpet.remove();
+						}
+					}.runTaskLater(Game.getPlugin(), 30);
+					return;
+				}
+
+				// Carpet's velocity
+				Vector velocity = hp.getPlayer().getLocation().getDirection().normalize().multiply(speed);
+				carpet.setVelocity(velocity);
+				// Carpet's 'angle'
+				carpet.setRightArmPose(new EulerAngle(0, 0, 3.14159+(180.0 - hp.getPlayer().getLocation().getPitch()) / 180.0 * 3.1415926535));
+				carpet.setRotation(hp.getPlayer().getLocation().getYaw()-90.f, 0);
+
+
+				// Effects
+				((Player)carpet.getPassengers().get(0)).addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 20*5, 0));
+				((Player)carpet.getPassengers().get(0)).addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20*1, 2));
+				final Location rear = carpet.getLocation().add(0, 1.1, 0).subtract(hp.getPlayer().getLocation().getDirection().normalize().multiply(2.9));
+				carpet.getWorld().spawnParticle(Particle.LAVA, rear, 10, 0.0, 0.0, 0.0);
+
+				// Spawn explosive
+				if (ticks % 15 == 0)
+				{
+					Fireball ball = (Fireball)carpet.getWorld().spawnEntity(rear, EntityType.FIREBALL);
+					ball.setDirection(new Vector(0, -2, 0));
+					ball.setIsIncendiary(true);
+					ball.setShooter(hp.getPlayer());
+					ball.setYield(2.1f);
+				}
+
+				if (ticks % 11 == 0)
+					carpet.getWorld().spawnFallingBlock(rear.clone().subtract(0.0, 1.5, 0.0), Material.FIRE.createBlockData());
+
+				++ticks;
+			}
+		}.runTaskTimer(Game.getPlugin(), 0, 1);
+	}
+
+	/**
+	 * While player is riding the magic carpet, the player is immune to fall damage
+	 * @param ev Event
+	 */
+	@EventHandler
+	public void onEntityDamage(EntityDamageEvent ev)
+	{
+		if (!(ev.getEntity() instanceof Player))
+			return;
+		if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
+			return;
+		final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+			return;
+
+		if (!(hp.getPlayer().getVehicle() instanceof ArmorStand))
+			return;
+		if (!((ArmorStand) hp.getPlayer().getVehicle()).getEquipment().getItemInMainHand().isSimilar(KitTom.magicCarpetModel))
+			return;
+
+		ev.setCancelled(true);
+	}
+
+	/**
+	 * Creates a flying carpet using a carpet & a coal block
+	 * @param ev Event
+	 */
+	@EventHandler
+	public void onDrop(PlayerDropItemEvent ev)
+	{
+		if (ev.getItemDrop().getItemStack().getType() != Material.COAL_BLOCK)
+			return;
+		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+			return;
+
+		// Wait 2 seconds
+		new BukkitRunnable()
+		{
+			@Override
+			public void run()
+			{
+				if (ev.getItemDrop() == null || ev.getItemDrop().isDead())
+					return;
+				if (!Util.containsMaterial(Util.carpets, ev.getItemDrop().getLocation().getBlock().getType()))
+					return;
+
+				ev.getItemDrop().getLocation().getBlock().setType(Material.AIR);
+				ev.getItemDrop().getLocation().getWorld().dropItemNaturally(ev.getItemDrop().getLocation(), KitTom.magicCarpet);
+				ev.getItemDrop().getLocation().getWorld().spawnParticle(Particle.LAVA, ev.getItemDrop().getLocation(), 100, 0.25f, 0.66f, 0.25f);
+				ev.getItemDrop().getLocation().getWorld().playSound(ev.getItemDrop().getLocation(), Sound.BLOCK_ANVIL_USE, SoundCategory.MASTER, 8.f, 1.f);
+				if (ev.getItemDrop().getItemStack().getAmount() > 1)
+					ev.getItemDrop().getItemStack().setAmount(ev.getItemDrop().getItemStack().getAmount()-1);
+				else
+					ev.getItemDrop().remove();
+			}
+		}.runTaskLater(Game.getPlugin(), 40);
+	}
+
+	/**
+	 * Updates tracker to track hunter
+	 * @param ev Event
+	 */
+	@EventHandler
+	public void onLeftClick(PlayerInteractEvent ev)
+	{
+		if (ev.getAction() != Action.LEFT_CLICK_AIR && ev.getAction() != Action.LEFT_CLICK_BLOCK)
+			return;
+		if (ev.getItem() == null)
+			return;
+		if (!ev.getItem().isSimilar(HuntItems.getTracker()))
+			return;
+		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+			return;
+
+		ev.setCancelled(true);
+		if (!hp.getPlayer().getInventory().contains(Material.ROTTEN_FLESH) &&
+			!hp.getPlayer().getInventory().contains(Material.BONE) &&
+			!hp.getPlayer().getInventory().contains(Material.GUNPOWDER) &&
+			!hp.getPlayer().getInventory().contains(Material.SPIDER_EYE))
+		{
+			hp.getPlayer().sendMessage("§cVous n'avez pas les éléments requis pour actualiser votre traqueur!");
+			return;
+		}
+
+		if (!hp.updateTracking(true))
+			return;
+
+		if (hp.getPlayer().getInventory().contains(Material.ROTTEN_FLESH))
+			Util.removeSingleItem(hp.getPlayer().getInventory(), Material.ROTTEN_FLESH);
+		else if (hp.getPlayer().getInventory().contains(Material.BONE))
+			Util.removeSingleItem(hp.getPlayer().getInventory(), Material.BONE);
+		else if (hp.getPlayer().getInventory().contains(Material.GUNPOWDER))
+			Util.removeSingleItem(hp.getPlayer().getInventory(), Material.GUNPOWDER);
+		else if (hp.getPlayer().getInventory().contains(Material.SPIDER_EYE))
+			Util.removeSingleItem(hp.getPlayer().getInventory(), Material.SPIDER_EYE);
+	}
+
+	/**
+	 * Timer task that makes player's heart beat
+	 */
+	public KitTomEvents()
+	{
+		new BukkitRunnable()
+		{
+			@Override
+			public void run()
+			{
+				// We check that the player's hunter is not null (even though it should not be required) because when testing
+				// we often force the inHunt stage even when players have no targets/hunters
+				// [TEAM MODE ONLY] also 'hunter' can be null in case hunter is offline/not in the same dim (because getClosestPlayer returns null in those cases)
+				if (!Game.inHunt())
+					return;
+
+				for (final HuntPlayer hp : Game.getPlayerList().values())
+				{
+					if (!hp.isAlive() || !hp.isOnline())
+						continue;
+					if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+						continue;
+
+					HuntPlayer hunter = null;
+					if (!Game.isTeamMode())
+						hunter = hp.getHunter();
+					else
+						hunter = hp.getTeam().getHunter().getClosestPlayer(hp);
+					if (hunter == null || !hunter.isOnline() || hp.getPlayer().getWorld() != hunter.getPlayer().getWorld() || !hunter.isAlive())
+						continue;
+
+					final double dist = hunter.getPlayer().getLocation().distanceSquared(hp.getPlayer().getLocation());
+					if (dist < 30.0 * 30.0)
+					{
+						hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 40, 0));
+						hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 8.f, .1f);
+						new BukkitRunnable()
+						{
+							@Override
+							public void run()
+							{
+								hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 8.f, .1f);
+							}
+						}.runTaskLater(Game.getPlugin(), 5);
+					} else if (dist < 50.0 * 50.0)
+					{
+						hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 1.f, .1f);
+					} else if (dist < 80.0 * 80.0)
+					{
+						hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 0.5f, .1f);
+					}
+				}
+			}
+		}.runTaskTimer(Game.getPlugin(), 0, 20);
+	}
+}
