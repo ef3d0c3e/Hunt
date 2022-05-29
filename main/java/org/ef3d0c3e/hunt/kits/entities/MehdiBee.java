@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.TextComponentTagVisitor;
 import net.minecraft.network.chat.*;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -134,7 +135,16 @@ public class MehdiBee extends Animal implements NeutralMob, FlyingAnimal
 	public void setOwner(final HuntPlayer owner)
 	{
 		this.owner = owner;
-		this.setCustomName(new TextComponent(MessageFormat.format("§6Mireille §8[§b{0}§8]", owner.getName())));
+		if (Game.isTeamMode())
+		{
+			final TextComponent name = new TextComponent("§6Mireille ");
+			name.append(new TextComponent("§8["))
+				.append(new TextComponent(owner.getName()).withStyle(Style.EMPTY.withColor(owner.getTeam().getColor().code)))
+				.append(new TextComponent("§8]"));
+			this.setCustomName(name);
+		}
+		else
+			this.setCustomName(new TextComponent(MessageFormat.format("§6Mireille §8[§b{0}§8]", owner.getName())));
 	}
 
 	public void spawn()

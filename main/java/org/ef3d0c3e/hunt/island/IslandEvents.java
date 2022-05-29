@@ -1,11 +1,7 @@
 package org.ef3d0c3e.hunt.island;
 
-import net.minecraft.world.item.alchemy.Potion;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.SoundCategory;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,20 +10,14 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
-import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.kits.KitHasagi;
-import org.ef3d0c3e.hunt.kits.KitID;
-import org.ef3d0c3e.hunt.kits.KitTom;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
-import java.awt.desktop.QuitEvent;
 
 public class IslandEvents implements Listener
 {

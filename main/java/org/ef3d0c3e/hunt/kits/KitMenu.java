@@ -16,6 +16,8 @@ import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.items.HuntItems;
 
+import java.lang.reflect.InvocationTargetException;
+
 public class KitMenu implements Listener
 {
 	static Kit m_kitList[];
@@ -99,8 +101,17 @@ public class KitMenu implements Listener
 			return;
 		final Kit kit = m_kitList[ev.getRawSlot()];
 		HuntPlayer hp = Game.getPlayer(ev.getWhoClicked().getName());
-		
-		hp.setKit(kit.makeCopy());
+
+		Class<? extends Kit> KitClass = kit.getClass();
+
+		try
+		{
+			hp.setKit(KitClass.getDeclaredConstructor().newInstance());
+		}
+		catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+		{
+			e.printStackTrace();
+		}
 		hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 65536.f, 1.4f);
 	}
 

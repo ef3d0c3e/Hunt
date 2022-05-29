@@ -1,5 +1,6 @@
 package org.ef3d0c3e.hunt.game;
 
+import java.lang.reflect.InvocationTargetException;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -15,6 +16,7 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.plugin.Plugin;
@@ -22,9 +24,12 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.ef3d0c3e.hunt.Fast;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Normal;
 import org.ef3d0c3e.hunt.Round;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
+import org.ef3d0c3e.hunt.events.GameStartEvent;
+import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.kits.Kit;
@@ -175,14 +180,35 @@ public class Game
 		m_nether.setTime(0);
 		m_nether.setDifficulty(Difficulty.NORMAL);
 
-		// Call kit start hooks
-		if (isKitMode())
+		// Start hooks
+		if (Game.isKitMode()) // Register
 		{
-			for (Kit kit : KitMenu.getList())
-				kit.start();
+			for (final Kit k : KitMenu.getList())
+			{
+				Class<? extends Kit> KitClass = k.getClass();
+				try
+				{
+					Class<?>[] SubClasses = KitClass.getDeclaredClasses();
+					for (Class<?> SubClass : SubClasses)
+					{
+						if (!SubClass.getName().endsWith("$Events"))
+							continue;
+
+						final Listener listener = (Listener)SubClass.getDeclaredConstructor().newInstance();
+						Bukkit.getPluginManager().registerEvents(listener, Game.getPlugin());
+					}
+				}
+				catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+				{
+					e.printStackTrace();
+				}
+
+			}
 		}
-		if (isIslandMode())
+		if (isIslandMode()) // TODO: EV
 			Island.start();
+
+		Bukkit.getPluginManager().callEvent(new GameStartEvent());
 
 		for (final HuntPlayer hp : m_playerList.values())
 		{
@@ -192,8 +218,6 @@ public class Game
 			hp.setAlive(true);
 			hp.setPlaying(true);
 			hp.getPlayer().setGameMode(GameMode.SURVIVAL);
-			if (isKitMode() && hp.getKit() != null)
-				hp.getKit().onStart(hp);
 			if (isIslandMode())
 				Island.onStart(hp);
 
@@ -206,6 +230,7 @@ public class Game
 				Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),
 					String.format("spreadplayers 0 0 0 %d false %s", m_borderMax - 5, hp.getName()) );
 
+			Bukkit.getPluginManager().callEvent(new HPSpawnEvent(hp, false));
 			++m_playerNum;
 		}
 

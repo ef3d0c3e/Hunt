@@ -31,6 +31,8 @@ public class StatSaves
 		try
 		{
 			FileWriter fw = new FileWriter(dir.getPath() + "/" + hp.getUUID());
+			fw.write(StatsMenu.HUNT.serialize(hp));
+			fw.write(StatsMenu.KITS.serialize(hp));
 			fw.write(StatsMenu.MINING.serialize(hp));
 			fw.close();
 		}
@@ -48,6 +50,8 @@ public class StatSaves
 	 */
 	public static void load(final HuntPlayer hp)
 	{
+		StatsMenu.HUNT.init(hp);
+		StatsMenu.KITS.init(hp);
 		StatsMenu.MINING.init(hp);
 
 		// Load from disk

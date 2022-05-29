@@ -7,6 +7,8 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.*;
+import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.ef3d0c3e.hunt.events.HPWinEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -41,7 +43,7 @@ public class Normal
 		if (!Game.isTeamMode() && Game.getPlayerNum() <= 1)
 		{
 			int score = Integer.MIN_VALUE;
-			java.util.Vector<String> winners = new java.util.Vector<String>();
+			java.util.Vector<HuntPlayer> winners = new java.util.Vector<>();
 			for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
 			{
 				if (!set.getValue().isPlaying()) // Player is not part of the game
@@ -53,19 +55,17 @@ public class Normal
 				{
 					if (!set.getValue().isPlaying()) // Player is not part of the game
 						continue;
-					winners.add(set.getKey());
+					winners.add(set.getValue());
 				}
-			for (final String p : winners)
+			for (final HuntPlayer hp : winners)
 			{
-				final HuntPlayer hp = Game.getPlayer(p);
-				if (Game.isKitMode() && hp.getKit() != null)
-					hp.getKit().onWin(hp);
+				Bukkit.getPluginManager().callEvent(new HPWinEvent(hp));
 			}
 
 			Messager.broadcastColor("<#FF8010>&m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m ");
 			Messager.broadcastColor("&r &r &r &r &r &r &r &r &r &r <#10FFA0>Fin de la partie!");
 			if (winners.size() == 1) // Single winner
-				Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &b{0} <#10FFA0>a gagné!", winners.get(0)));
+				Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &b{0} <#10FFA0>a gagné!", winners.get(0).getName()));
 			else // Multiple winners
 			{
 				String win = "";
@@ -74,9 +74,9 @@ public class Normal
 					if (i != 0)
 					{
 						if (i == winners.size() - 1)
-							win += "<#10FFA0> et &b" + winners.get(i);
+							win += "<#10FFA0> et &b" + winners.get(i).getName();
 						else
-							win += "<#10FFA0>, &b" + winners.get(i);
+							win += "<#10FFA0>, &b" + winners.get(i).getName();
 					} else
 						win += winners.get(i);
 				}
@@ -113,8 +113,7 @@ public class Normal
 					winners.add(team.getColoredName());
 					team.forAll((hp) ->
 					{
-						if (Game.isKitMode() && hp.getKit() != null)
-							hp.getKit().onWin(hp);
+						Bukkit.getPluginManager().callEvent(new HPWinEvent(hp));
 					});
 				}
 
@@ -161,9 +160,10 @@ public class Normal
 		if (Game.getPlayerNum() > 1)
 			updateTargets();
 
+		Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, killer));
 		// Kits hook
-		if (Game.isKitMode() && hp.getKit() != null)
-			hp.getKit().onDeath(hp);
+		//if (Game.isKitMode() && hp.getKit() != null)
+		//	hp.getKit().onDeath(hp);
 
 		// Island hook
 		if (Game.isIslandMode())

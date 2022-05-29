@@ -6,15 +6,31 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
+import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -68,15 +84,7 @@ public class KitFlavien extends Kit
 		return desc;
 	}
 
-	@Override
-	public KitID getID() { return KitID.FLAVIEN; }
-
-
-	/**
-	 * Registers elytra recipe, firework & event listener
-	 */
-	@Override
-	public void start()
+	static
 	{
 		elytraItem = new ItemStack(Material.ELYTRA);
 		{
@@ -107,37 +115,6 @@ public class KitFlavien extends Kit
 			meta.setDisplayName("§dFusée");
 			fireworkItem.setItemMeta(meta);
 		}
-
-		Bukkit.getServer().getPluginManager().registerEvents(new KitFlavienEvents(), Game.getPlugin());
-	}
-	/**
-	 * Registers recipes, allows flight & Awards achievements
-	 * @param hp Player
-	 */
-	@Override
-	public void onStart(HuntPlayer hp)
-	{
-		hp.getPlayer().discoverRecipe(new NamespacedKey(Game.getPlugin(), "flavien_elytra"));
-		hp.getPlayer().setAllowFlight(true);
-		HuntAchievement.PLAY_FLAVIEN.award(hp.getPlayer(), 1);
-	}
-	/**
-	 * Awards achievements for winning with this kit
-	 * @param hp Player
-	 */
-	@Override
-	public void onWin(HuntPlayer hp)
-	{
-		HuntAchievement.WIN_FLAVIEN.award(hp.getPlayer(), 1);
-	}
-	/**
-	 * Disables fly mode
-	 * @param hp Player that died or lost his kit
-	 */
-	@Override
-	public void onDeath(HuntPlayer hp)
-	{
-		hp.getPlayer().setAllowFlight(false);
 	}
 
 	@Override
@@ -152,10 +129,150 @@ public class KitFlavien extends Kit
 			!item.isSimilar(fireworkItem);
 	}
 
-	@Override
-	public Kit makeCopy()
-	{
-		return new KitFlavien();
-	}
 	public KitFlavien() {}
+
+	public static class Events implements Listener
+	{
+		@EventHandler
+		public void onSpawn(final HPSpawnEvent ev)
+		{
+			final HuntPlayer hp = ev.getPlayer();
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			hp.getPlayer().discoverRecipe(new NamespacedKey(Game.getPlugin(), "flavien_elytra"));
+			hp.getPlayer().setAllowFlight(true);
+		}
+
+		@EventHandler
+		public void onDeath(final HPDeathEvent ev)
+		{
+			final HuntPlayer hp = ev.getVictim();
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			hp.getPlayer().setAllowFlight(false);
+		}
+
+		/**
+		 * Double jump
+		 * @param ev Event
+		 */
+		@EventHandler
+		public void onFly(PlayerToggleFlightEvent ev)
+		{
+			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			ev.setCancelled(true);
+			hp.getPlayer().setAllowFlight(false);
+			hp.getPlayer().setVelocity(hp.getPlayer().getVelocity().multiply(new Vector(2.0, 0.0, 2.0)).add(new Vector(0.0, 0.85, 0.0)));
+
+			new BukkitRunnable()
+			{
+				@Override
+				public void run()
+				{
+					if (!hp.getPlayer().isOnline())
+						return;
+					if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien)) // Player's kit may have changed
+						return;
+
+					hp.getPlayer().setAllowFlight(true);
+				}
+			}.runTaskLater(Game.getPlugin(), 40);
+		}
+
+		/**
+		 * Allows flight for player when they connect
+		 * @param ev Event
+		 */
+		@EventHandler
+		public void onJoin(final PlayerJoinEvent ev)
+		{
+			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			if (!hp.isAlive())
+				return;
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			hp.getPlayer().setAllowFlight(true);
+		}
+
+		/**
+		 * Consuming sugar gives speed
+		 * @param ev Event
+		 */
+		@EventHandler
+		public void onRightClick(PlayerInteractEvent ev)
+		{
+			if (ev.getAction() != Action.RIGHT_CLICK_AIR && ev.getAction() != Action.RIGHT_CLICK_BLOCK)
+				return;
+			if (ev.getItem() == null)
+				return;
+			if (ev.getItem().getType() != Material.SUGAR)
+				return;
+			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			// Stop if clicking an inventory
+			if (!hp.getPlayer().isSneaking() && ev.getAction() == Action.RIGHT_CLICK_BLOCK &&
+				Util.containsMaterial(Util.rightClickableBlocks, ev.getClickedBlock().getType()))
+				return;
+
+			ev.setCancelled(true);
+
+			final PotionEffect current = hp.getPlayer().getPotionEffect(PotionEffectType.SPEED);
+			int duration = 0;
+			if (current != null)
+			{
+				if (current.getAmplifier() > 2)
+					return;
+				else if (current.getAmplifier() == 2)
+					duration += current.getDuration();
+			}
+
+			ev.getItem().setAmount(ev.getItem().getAmount()-1);
+			hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, duration + 100, 2));
+		}
+
+		/**
+		 * Creepers drop firework when killed
+		 * @param ev Event
+		 */
+		@EventHandler
+		public void onEntityDeath(EntityDeathEvent ev)
+		{
+			if (!(ev.getEntity() instanceof Creeper))
+				return;
+			final HuntPlayer killer = Util.getPlayerKiller(ev.getEntity().getKiller());
+			if (killer == null || killer.getKit() == null || !(killer.getKit() instanceof KitFlavien))
+				return;
+
+			if (Game.nextPosInt() % 2 == 0)
+				ev.getDrops().add(KitFlavien.fireworkItem);
+			if (Game.nextPosInt() % 4 == 0)
+				ev.getDrops().add(KitFlavien.fireworkItem);
+		}
+
+		/**
+		 * Player is immune to fall damage
+		 * @param ev Event
+		 */
+		@EventHandler
+		public void onEntityDamage(EntityDamageEvent ev)
+		{
+			if (!(ev.getEntity() instanceof Player))
+				return;
+			if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
+				return;
+			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
+				return;
+
+			ev.setCancelled(true);
+		}
+	}
 }

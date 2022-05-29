@@ -24,7 +24,7 @@ import org.ef3d0c3e.hunt.Normal;
 import org.ef3d0c3e.hunt.Round;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.items.HuntItems;
-import org.ef3d0c3e.hunt.kits.KitLanczosEvents;
+import org.ef3d0c3e.hunt.kits.KitLanczos;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.spigotmc.event.entity.EntityMountEvent;
 import net.md_5.bungee.api.ChatMessageType;
@@ -294,7 +294,7 @@ public class Events implements Listener
 			return;
 
 		ev.setCancelled(true);
-		if (Game.isKitMode() && KitLanczosEvents.KitLanczosPreDeathHook(victim))
+		if (Game.isKitMode() && KitLanczos.KitLanczosPreDeathHook(victim))
 			return;
 		if (Game.isTeamMode())
 			Messager.broadcast(MessageFormat.format("§8'{§c☠§8}' {0}§7 est mort.", victim.getTeamColoredName()));

@@ -1,32 +1,23 @@
 package org.ef3d0c3e.hunt;
 
-import net.minecraft.world.level.block.CarrotBlock;
-import org.bukkit.Bukkit;
-import org.bukkit.CropState;
 import org.bukkit.Material;
-import org.bukkit.block.EnchantingTable;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.kits.KitID;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-
-import java.text.MessageFormat;
 
 public class Fast
 {

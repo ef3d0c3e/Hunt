@@ -8,6 +8,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,6 +26,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.items.HuntItems;
@@ -813,9 +816,10 @@ public class Round
 		if (hp.getRoundData().isAlive() && (killer == null || killer.getRoundData().isAlive()))
 			Util.spawnTomb(hp.getPlayer().getLocation(), hp);
 
+		Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, killer));
 		// Kits hook
-		if (Game.isKitMode() && hp.getKit() != null)
-			hp.getKit().onDeath(hp);
+		//if (Game.isKitMode() && hp.getKit() != null)
+			//hp.getKit().onDeath(hp);
 
 		boolean update = true;
 		if (!endRound && hp.getRoundData().isAlive() && killer != null && killer.getRoundData().isZombie())
@@ -978,13 +982,15 @@ public class Round
 			// Kits hook
 			if (Game.isKitMode() && hp.getKit() != null)
 			{
-				hp.getKit().onDeath(hp);
+				//hp.getKit().onDeath(hp);
 				hp.setKit(null);
 			}
 
 			// Island hook
 			if (Game.isIslandMode())
 				Island.onDeath(hp);
+
+			Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, (LivingEntity) null));
 
 			Game.getOverworld().setGameRule(GameRule.NATURAL_REGENERATION, false);
 			Game.getOverworld().setGameRule(GameRule.DO_MOB_SPAWNING, false);
@@ -1213,8 +1219,9 @@ public class Round
 					hp.getRoundData().setDeathTime(-1);
 
 					makeAlive(hp);
-					if (Game.isKitMode())
-						hp.getKit().onStart(hp);
+					//if (Game.isKitMode())
+					//	hp.getKit().onStart(hp);
+					Bukkit.getPluginManager().callEvent(new HPSpawnEvent(hp, false));
 				}
 
 

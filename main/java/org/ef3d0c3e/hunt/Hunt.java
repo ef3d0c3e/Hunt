@@ -161,8 +161,8 @@ public class Hunt extends JavaPlugin
 						else
 							ping.setMotD(MessageFormat.format("    §9§lHUNT §f§m       §8§o'{'§m §r   {0}   §f§lEN ATTENTE", modes));
 
-						ping.setVersionName(MessageFormat.format("§d<§e1.18+§d> §6» §l{0}/{1}", ping.getPlayersOnline(), ping.getPlayersMaximum()));
 						ping.setVersionProtocol(999);
+						ping.setVersionName(MessageFormat.format("§d<§e1.18+§d> §6» §l{0}/{1}", ping.getPlayersOnline(), ping.getPlayersMaximum()));
 						if (Game.nextPosInt() % 4 == 0)
 							ping.setPlayers(Arrays.asList(
 								new WrappedGameProfile(UUID.randomUUID(), "§0"),

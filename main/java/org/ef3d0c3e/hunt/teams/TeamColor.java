@@ -11,6 +11,7 @@ public class TeamColor
 	public String color; // Color code
 	public Material concrete; // Colored concrete block
 	public Material banner; // Colored banner item
+	public int code; // Hex color code
 	
 	public ItemStack getGuiItem()
 	{
@@ -38,6 +39,11 @@ public class TeamColor
 		this.color = color;
 		this.concrete = concrete;
 		this.banner = banner;
+
+		code = 0;
+		code |= Integer.valueOf(color.substring(2, 4), 16) << 16;
+		code |= Integer.valueOf(color.substring(4, 6), 16) << 8;
+		code |= Integer.valueOf(color.substring(6, 8), 16);
 	}
 	
 	public static TeamColor list[] =

@@ -22,18 +22,20 @@ import org.ef3d0c3e.hunt.Messager;
 import org.ef3d0c3e.hunt.Normal;
 import org.ef3d0c3e.hunt.Pair;
 import org.ef3d0c3e.hunt.Round;
+import org.ef3d0c3e.hunt.events.HPKilledWrongEvent;
+import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.island.IslandData;
 import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.kits.Kit;
-import org.ef3d0c3e.hunt.kits.KitID;
-import org.ef3d0c3e.hunt.kits.KitLanczosEvents;
+import org.ef3d0c3e.hunt.kits.KitJb;
+import org.ef3d0c3e.hunt.kits.KitLanczos;
 import org.ef3d0c3e.hunt.kits.KitMenu;
 import org.ef3d0c3e.hunt.skins.Skin;
+import org.ef3d0c3e.hunt.stats.StatLong;
 import org.ef3d0c3e.hunt.stats.StatSaves;
 import org.ef3d0c3e.hunt.stats.StatValue;
-import org.ef3d0c3e.hunt.stats.StatsMenu;
 import org.ef3d0c3e.hunt.teams.Team;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 
@@ -204,7 +206,7 @@ public class HuntPlayer implements Listener
 					Location loc = null;
 					public void end()
 					{
-						if (Game.isKitMode() && KitLanczosEvents.KitLanczosPreDeathHook(victim))
+						if (Game.isKitMode() && KitLanczos.KitLanczosPreDeathHook(victim))
 							return;
 
 						// Give player's skull to killer
@@ -271,7 +273,7 @@ public class HuntPlayer implements Listener
 					@Override
 					public void run()
 					{
-						if (!Game.isKitMode() || (victim.getKit() == null || victim.getKit().getID() != KitID.JB))
+						if (!Game.isKitMode() || (victim.getKit() == null || !(victim.getKit() instanceof KitJb)))
 						{
 							end();
 							cancel();
@@ -352,7 +354,7 @@ public class HuntPlayer implements Listener
 
 				// Kits Hooks
 				if (Game.isKitMode() && attacker.getKit() != null)
-					attacker.getKit().onKillWrong(attacker, this);
+					Bukkit.getPluginManager().callEvent(new HPKilledWrongEvent(this, attacker));
 
 				attacker.setScore(attacker.getScore() - 2);
 			}
@@ -609,6 +611,16 @@ public class HuntPlayer implements Listener
 	}
 
 	/**
+	 * Increment specific (long) stat
+	 * @param key Stat's key
+	 */
+	public void incStat(final String key)
+	{
+		final StatLong s = (StatLong)m_stats.get(key);
+		++s.value;
+	}
+
+	/**
 	 * Get wether or not player can damage another player
 	 * @param other The player that would be damaged
 	 * @return true If this player can damage other
@@ -783,9 +795,7 @@ public class HuntPlayer implements Listener
 		getPlayer().teleport(new Location(Game.getOverworld(), 0, 256, 0));
 		getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 7*20, 10));
 		getPlayer().setHealth(getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-		if (Game.isKitMode() && getKit() != null)
-			getKit().onStart(this);
-		if (Game.isIslandMode())
+		if (Game.isIslandMode()) // TODO: EV
 			Island.onStart(this);
 
 		if (!Game.isRoundMode())
@@ -797,6 +807,8 @@ public class HuntPlayer implements Listener
 			Messager.broadcast(MessageFormat.format("§8'{§d☀§8}' {0}§7 a été ressuscité!", getTeamColoredName()));
 		else
 			Messager.broadcast(MessageFormat.format("§8'{§d☀§8}' §b{0}§7 a été ressuscité!", getName()));
+
+		Bukkit.getPluginManager().callEvent(new HPSpawnEvent(this, true));
 	}
 
 	/*
@@ -1141,5 +1153,16 @@ public class HuntPlayer implements Listener
 				return true;
 			}
 		}
+	}
+
+	public interface ForEach
+	{
+		void operation(final HuntPlayer hp);
+	}
+
+	static public void forEach(final ForEach f)
+	{
+		for (final HuntPlayer hp : Game.getPlayerList().values())
+			f.operation(hp);
 	}
 }

@@ -9,6 +9,7 @@ public abstract class Kit
 {
 	protected static final String itemColor = "§a";
 	protected static final String itemLoreColor = "§6";
+
 	/**
 	 * Sets whether kits can be picked only once or not
 	 */
@@ -28,44 +29,13 @@ public abstract class Kit
 	 * Gets kit's display item for GUI
 	 * @return Kit's display item
 	 */
-	abstract ItemStack getDisplayItem();
+	public abstract ItemStack getDisplayItem();
 	/**
 	 * Gets Kit's description
 	 * @return Kit's description as an array of lines
 	 */
 	abstract public String[][] getDescription();
-	/**
-	 * Gets kit's ID
-	 * @return Kit's ID
-	 */
-	abstract public KitID getID();
 
-
-	/**
-	 * Called once when game starts
-	 */
-	public void start() {}
-	/**
-	 * Called every time player gets the kit or revives
-	 * @param hp Player
-	 */
-	public void onStart(HuntPlayer hp) {}
-	/**
-	 * Called when player wins the game with this kit
-	 * @param hp Player
-	 */
-	public void onWin(HuntPlayer hp) {}
-	/**
-	 * Called when player attempted to kill wrong player
-	 * @param hp Player attempting to kill
-	 * @param killed Player that would have been killed
-	 */
-	public void onKillWrong(HuntPlayer hp, HuntPlayer killed) {}
-	/**
-	 * Called when player dies or lose his kit
-	 * @param hp Player that died or lost his kit
-	 */
-	public void onDeath(HuntPlayer hp) {}
 
 	/**
 	 * Called when kit's ownership has been transferred to another player
@@ -87,10 +57,4 @@ public abstract class Kit
 	 * @return True if item can be put in the death chest, false otherwise
 	 */
 	public boolean itemFilter(final ItemStack item) { return true; };
-
-	/**
-	 * Makes a copy of this kit
-	 * @return A copy of this kit
-	 */
-	abstract public Kit makeCopy();
 }

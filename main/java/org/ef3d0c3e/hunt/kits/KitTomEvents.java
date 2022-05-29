@@ -35,7 +35,7 @@ public class KitTomEvents implements Listener
 		if (ev.getItem() == null || !ev.getItem().isSimilar(KitTom.magicCarpet))
 			return;
 		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+		if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 			return;
 
 		// Stop if clicking an inventory
@@ -129,7 +129,7 @@ public class KitTomEvents implements Listener
 		if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
 			return;
 		final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
-		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+		if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 			return;
 
 		if (!(hp.getPlayer().getVehicle() instanceof ArmorStand))
@@ -150,7 +150,7 @@ public class KitTomEvents implements Listener
 		if (ev.getItemDrop().getItemStack().getType() != Material.COAL_BLOCK)
 			return;
 		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+		if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 			return;
 
 		// Wait 2 seconds
@@ -190,7 +190,7 @@ public class KitTomEvents implements Listener
 		if (!ev.getItem().isSimilar(HuntItems.getTracker()))
 			return;
 		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-		if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+		if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 			return;
 
 		ev.setCancelled(true);
@@ -236,7 +236,7 @@ public class KitTomEvents implements Listener
 				{
 					if (!hp.isAlive() || !hp.isOnline())
 						continue;
-					if (hp.getKit() == null || hp.getKit().getID() != KitID.TOM)
+					if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 						continue;
 
 					HuntPlayer hunter = null;

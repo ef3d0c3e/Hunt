@@ -108,6 +108,13 @@ public class CmdChangelog
 				"",
 				"* Mise à jours vers la 1.18.2",
 			},
+			{ // Page 8
+				"",
+				" &9 &9 &n29 mai 2022&9: &6&oHunt 3.7.1",
+				"",
+				"* Corrections de bugs::● Julien n'était pas target par les undeads\n●JB était target par les undeads",
+				"+ Les abeilles de Mehdi ont un nom aux couleurs de leur équipe"
+			},
 		};
 		
 		int page;
