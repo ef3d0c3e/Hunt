@@ -17,18 +17,16 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
-import org.ef3d0c3e.hunt.events.HPSpawnEvent;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.game.Game;
-import packets.DestroyEntityHelper;
-import packets.EquipmentHelper;
-import packets.LivingEntityHelper;
-import packets.MetadataHelper;
+import org.ef3d0c3e.hunt.packets.DestroyEntityHelper;
+import org.ef3d0c3e.hunt.packets.EquipmentHelper;
+import org.ef3d0c3e.hunt.packets.LivingEntityHelper;
+import org.ef3d0c3e.hunt.packets.MetadataHelper;
 
 import java.text.MessageFormat;
 import java.util.Arrays;
@@ -46,7 +44,7 @@ public class KitBaptiste extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.SPECTRAL_ARROW, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.SPECTRAL_ARROW, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Affiche la trajectoire des flèches",
 			Kit.itemLoreColor + "╸ Illumine ses cibles",
 			Kit.itemLoreColor + "╸ Connaît les PV de ses cibles",
@@ -71,6 +69,21 @@ public class KitBaptiste extends Kit
 		return desc;
 	}
 
+	@Override
+	public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
+	{
+		// Delete indicator
+		try
+		{
+			ProtocolManager manager = Game.getProtocolManager();
+			manager.sendServerPacket(prev.getPlayer(), entityDestroy.getPacket());
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
 	public KitBaptiste() {}
 
 	static UUID uuid = UUID.randomUUID();
@@ -81,20 +94,6 @@ public class KitBaptiste extends Kit
 
 	public static class Events implements Listener
 	{
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			try
-			{
-				ProtocolManager manager = Game.getProtocolManager();
-				manager.sendServerPacket(ev.getVictim().getPlayer(), entityDestroy.getPacket());
-			}
-			catch (Exception e)
-			{
-
-			}
-		}
-
 		/**
 		 * Refunds arrow when miss & resets hit streak
 		 * @param ev Event
@@ -104,7 +103,7 @@ public class KitBaptiste extends Kit
 		{
 			if (!(ev.getEntity().getShooter() instanceof Player) || ev.getHitEntity() != null)
 				return;
-			final HuntPlayer hp = Game.getPlayer(((Player)ev.getEntity().getShooter()).getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity().getShooter());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitBaptiste))
 				return;
 
@@ -134,7 +133,7 @@ public class KitBaptiste extends Kit
 				!(ev.getDamager() instanceof Projectile) ||
 				!(((Projectile)ev.getDamager()).getShooter() instanceof Player))
 				return;
-			final HuntPlayer shooter = Game.getPlayer(((Player)((Projectile)ev.getDamager()).getShooter()).getName());
+			final HuntPlayer shooter = HuntPlayer.getPlayer((Player)((Projectile)ev.getDamager()).getShooter());
 			if (shooter.getKit() == null || !(shooter.getKit() instanceof KitBaptiste) || ((Projectile) ev.getDamager()).getShooter() == ev.getEntity())
 				return;
 
@@ -228,7 +227,7 @@ public class KitBaptiste extends Kit
 				return;
 			if (!(ev.getProjectile() instanceof Arrow) || !(ev.getEntity() instanceof Player))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
 			if (hp.getKit() == null || hp.getKit() instanceof KitBaptiste)
 				return;
 
@@ -243,11 +242,11 @@ public class KitBaptiste extends Kit
 
 					arrow.getWorld().spawnParticle(Particle.DRIP_LAVA, arrow.getLocation(), 1, 0.0, 0.0, 0.0, 0);
 				}
-			}.runTaskTimer(Game.getPlugin(), 3, 1);
+			}.runTaskTimer(Hunt.plugin, 3, 1);
 		}
 
 		/**
-		 * Initializes entity packets for arrow target prediction
+		 * Initializes entity org.ef3d0c3e.hunt.packets for arrow target prediction
 		 * & Starts a runnable that displays prediction for every players
 		 */
 		@EventHandler
@@ -258,7 +257,7 @@ public class KitBaptiste extends Kit
 			{
 				static PacketContainer metadataPacket;
 				static PacketContainer equipmentPacket;
-				static // Pre generate some packets
+				static // Pre generate some org.ef3d0c3e.hunt.packets
 				{
 					MetadataHelper metadata = new MetadataHelper();
 					metadata.setStatus((byte)(MetadataHelper.Status.Glowing | MetadataHelper.Status.Invisible));
@@ -274,14 +273,13 @@ public class KitBaptiste extends Kit
 				@Override
 				public void run()
 				{
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitBaptiste))
-							continue;
+							return;
 						if (hp.getPlayer().getInventory().getItemInMainHand().getType() != Material.BOW)
-							continue;
+							return;
 
 						final Location pred = getArrowPrediction(hp.getPlayer().getLocation().getDirection().normalize().multiply(44.659313), hp.getPlayer().getEyeLocation(), 400);
 
@@ -301,9 +299,9 @@ public class KitBaptiste extends Kit
 						{
 
 						}
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 2);
+			}.runTaskTimer(Hunt.plugin, 0, 2);
 		}
 	}
 }

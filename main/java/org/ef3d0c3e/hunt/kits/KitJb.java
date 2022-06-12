@@ -1,8 +1,7 @@
 package org.ef3d0c3e.hunt.kits;
 
 import net.minecraft.world.entity.monster.ZombifiedPiglin;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -14,11 +13,17 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.events.HPlayerDeathEvent;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.game.Game;
+import org.ef3d0c3e.hunt.player.PlayerInteractions;
+
+import static org.bukkit.event.EventPriority.LOWEST;
 
 /**
  * Jean-Baptiste's kit
@@ -32,7 +37,7 @@ public class KitJb extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.WITHER_ROSE, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.WITHER_ROSE, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Corromp le monde autour de lui",
 			Kit.itemLoreColor + "╸ Donne hunger en tapant",
 			Kit.itemLoreColor + "╸ Donne poison à l'arc",
@@ -74,7 +79,7 @@ public class KitJb extends Kit
 		@EventHandler
 		void onPlayerMove(final PlayerMoveEvent ev)
 		{
-			HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive() || hp.getKit() == null || !(hp.getKit() instanceof KitJb))
 				return;
 
@@ -278,7 +283,7 @@ public class KitJb extends Kit
 				return;
 			if (ev.getCause() != EntityDamageEvent.DamageCause.LIGHTNING)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitJb))
 				return;
 
@@ -295,10 +300,84 @@ public class KitJb extends Kit
 			if (!(ev.getTarget() instanceof Player) ||
 				!((ev.getEntity() instanceof Zombie) && (ev.getEntity() instanceof Skeleton) && (ev.getEntity() instanceof ZombifiedPiglin)))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getTarget().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getTarget());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitJb))
 				return;
 			ev.setCancelled(true);
+		}
+
+		/**
+		 * Curse: When a player kills jb, jb gets put into a statis and killer
+		 * gets cursed. After 5 seconds the statis ends; if killer has died,
+		 * jb is revived otherwise jb is killed and killer gets the reward
+		 * @param ev Event
+		 */
+		@EventHandler(ignoreCancelled = true, priority = LOWEST)
+		public void onDeath(final HPlayerDeathEvent ev)
+		{
+			if (ev.getVictim().getKit() == null || !(ev.getVictim().getKit() instanceof KitJb))
+				return;
+			if (ev.getPlayerKiller() == null || !(ev.isCancellable()))
+				return;
+			ev.setCancelled(true);
+
+			new BukkitRunnable()
+			{
+				int seconds = 0;
+				Location loc;
+
+				@Override
+				public void run()
+				{
+					if (seconds == 0)
+					{
+						ev.getPlayerKiller().getPlayer().sendTitle("§4§lMAUDIT!", "§cSURVIVEZ POUR GAGNER VOTRE KILL...", 5, 100, 20);
+						ev.getVictim().getPlayer().sendTitle("§4§lMorts...", "§7Sauf si votre assassin vient à mourir...", 5, 100, 20);
+
+						loc = ev.getVictim().getPlayer().getLocation();
+						ev.getVictim().getPlayer().setGameMode(GameMode.SPECTATOR);
+						loc.getWorld().spawnEntity(loc, EntityType.BAT);
+						loc.getWorld().spawnParticle(Particle.SQUID_INK, loc, 150, 0.4, 1.3, 0.4);
+
+						ev.getPlayerKiller().getCombatData().damagedNow(ev.getVictim()); // Victim will get awarded for killer's death
+						ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
+						ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, 100, 1));
+						ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0));
+					}
+					else if (ev.getPlayerKiller().getDeathTime()+1 == Game.getTime() || !ev.getPlayerKiller().isOnline() || seconds == 5)
+					{
+						if (ev.getPlayerKiller().getDeathTime()+1 != Game.getTime() && ev.getPlayerKiller().isOnline())
+						{
+							ev.getPlayerKiller().getPlayer().sendTitle("§4Chasseur de Vampire!", "§cVous avez survécu à la malédiction!", 5, 100, 20);
+							ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 5, 1));
+							ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 4, 0));
+							ev.getPlayerKiller().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 5, 1));
+
+							HuntAchievement.VAMPIRE_KILL.award(ev.getPlayerKiller().getPlayer(), 1);
+						}
+						else
+						{
+							ev.getVictim().getPlayer().teleport(loc);
+							ev.getVictim().getPlayer().sendTitle("§4Dracula!", "§cVous voilà ressuscité.", 5, 100, 20);
+							ev.getVictim().getPlayer().setGameMode(GameMode.SURVIVAL);
+							ev.getVictim().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 3, 1));
+							ev.getVictim().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 4, 0));
+							ev.getVictim().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 4, 1));
+							HuntAchievement.VAMPIRE_REVIVE.award(ev.getVictim().getPlayer(), 1);
+
+							// Force kill if offline
+							if (!ev.getPlayerKiller().isOnline())
+							{
+								// FIXME: If player reconnects at round end, then he won't be counted as dead (still alive at end of round)
+								Bukkit.getPluginManager().callEvent(new HPlayerDeathEvent(ev.getVictim(), ev.getPlayerKiller(), false));
+							}
+						}
+						//ev.getPlayerKiller().setDeathTime(-1); // Resets it
+						cancel();
+					}
+					++seconds;
+				}
+			}.runTaskTimer(Hunt.plugin, 0, 20);
 		}
 	}
 }

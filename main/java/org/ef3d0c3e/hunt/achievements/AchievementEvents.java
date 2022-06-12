@@ -14,12 +14,11 @@ public class AchievementEvents implements Listener
 {
 	public AchievementEvents()
 	{
-		for (final HuntPlayer hp : Game.getPlayerList().values())
-		{
+		HuntPlayer.forEach(hp -> {
 			HuntAchievement.PLAY_1.award(hp.getPlayer(), 1);
 			HuntAchievement.PLAY_5.award(hp.getPlayer(), 1);
 			HuntAchievement.PLAY_10.award(hp.getPlayer(), 1);
-		}
+		});
 	}
 
 	@EventHandler

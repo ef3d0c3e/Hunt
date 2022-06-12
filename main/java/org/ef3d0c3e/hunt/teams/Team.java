@@ -1,23 +1,25 @@
 package org.ef3d0c3e.hunt.teams;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.Vector;
+import java.util.*;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.*;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import org.bukkit.Bukkit;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Messager;
+import org.ef3d0c3e.hunt.events.GameStartEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-import packets.MetadataHelper;
+import org.ef3d0c3e.hunt.packets.MetadataHelper;
 
 /**
  * Team class
@@ -26,12 +28,16 @@ public class Team
 {
 	private TeamColor m_color;
 	private String m_name;
-	private Vector<HuntPlayer> m_playerList; // Is filled with the players that are actively playing in this team (there must not be teamless spectators)
-	private int m_score;
-	private boolean m_alive;
+	private Vector<HuntPlayer> playerList; // Is filled with the players that are actively playing in this team (there must not be teamless spectators)
+	@Getter @Setter
+	private int score;
+	@Getter
+	private boolean alive;
 
-	private Team m_target;
-	private Team m_hunter;
+	@Getter @Setter
+	private Team target;
+	@Getter @Setter
+	private Team hunter;
 
 	/**
 	 * Constructor
@@ -43,12 +49,12 @@ public class Team
 	{
 		this.m_color = color;
 		this.m_name = name;
-		m_playerList = new Vector<HuntPlayer>();
-		m_score = 0;
-		m_alive = false;
+		playerList = new Vector<HuntPlayer>();
+		score = 0;
+		alive = false;
 		
-		m_target = null;
-		m_hunter = null;
+		target = null;
+		hunter = null;
 	}
 
 	/**
@@ -58,17 +64,6 @@ public class Team
 	 */
 	public void start()
 	{
-		// Populate player list
-		for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-		{
-			if (set.getValue().getTeam() != this)
-				continue;
-			
-			m_playerList.add(set.getValue());
-		}
-
-		if (!m_playerList.isEmpty())
-			m_alive = true;
 	}
 
 	/**
@@ -99,117 +94,53 @@ public class Team
 	}
 
 	/**
-	 * Get list of players in team
-	 * @return A list containing all team's players
-	 */
-	public Vector<HuntPlayer> getPlayerList()
-	{
-		return m_playerList;
-	}
-
-	/**
-	 * Get the team's score
-	 * @return The team's score
-	 */
-	public int getScore()
-	{
-		return m_score;
-	}
-
-	/**
-	 * Sets the team's score
-	 * @param score Sets the team's score
-	 * @note Low-Level : will not update players' scoreboards
-	 */
-	public void setScore(final int score)
-	{
-		m_score = score;
-	}
-
-	/**
-	 * Get the team's current target (may be null if team has no target)
-	 * @return The team's current target
-	 */
-	public Team getTarget()
-	{
-		return m_target;
-	}
-
-	/**
-	 * Set the team's target (team should match with the target's hunter)
-	 * @param target The team's target
-	 */
-	public void setTarget(Team target)
-	{
-		m_target = target;
-	}
-
-	/**
-	 * Get the team's current hunter (may be null if team has no hunter)
-	 * @return The team's current hunter
-	 */
-	public Team getHunter()
-	{
-		return m_hunter;
-	}
-
-	/**
-	 * Set the team's hunter (team should match with the hunter's target)
-	 * @param hunter The team's hunter
-	 */
-	public void setHunter(Team hunter)
-	{
-		m_hunter = hunter;
-	}
-
-	/**
-	 * Returns whether the team still has alive players in it
-	 * @return true If team still has alive players
-	 */
-	public boolean isAlive()
-	{
-		return m_alive;
-	}
-
-	/**
 	 * Returns whether the team still has alive players (for round mode) in it
 	 * @return true If team still has alive players (for round mode)
 	 */
 	public boolean isAliveRound()
 	{
-		m_alive = false;
-		for (final HuntPlayer hp : m_playerList)
+		alive = false;
+		for (final HuntPlayer hp : playerList)
 		{
 			if (!hp.isAlive())
 				continue;
 
-			m_alive = true;
+			alive = true;
 			break;
 		}
 
-		return m_alive;
+		return alive;
 	}
 
 	public void updateAlive()
 	{
-		m_alive = false;
-		for (final HuntPlayer hp : m_playerList)
+		alive = false;
+		for (final HuntPlayer hp : playerList)
 		{
 			if (!hp.isAlive())
 				continue;
 
-			m_alive = true;
+			alive = true;
 			break;
 		}
 
-		if (!m_alive)
-			m_target = m_hunter = null;
+		if (!alive)
+			target = hunter = null;
+	}
+
+	/**
+	 * Gets number of players in team
+	 * @return Number of players
+	 */
+	public int size()
+	{
+		return playerList.size();
 	}
 
 	/**
 	 * Interface for `forAll` parameters
 	 */
-	public interface ForAll
+	public interface ForAllPlayers
 	{
 		public void operation(HuntPlayer hp);
 	}
@@ -218,9 +149,9 @@ public class Team
 	 * Execute lambda for all players in team
 	 * @param f Lambda expressiopn to execute for all players
 	 */
-	public void forAll(ForAll f)
+	public void forAllPlayers(ForAllPlayers f)
 	{
-		for (HuntPlayer hp : m_playerList)
+		for (HuntPlayer hp : playerList)
 			f.operation(hp);
 	}
 
@@ -233,7 +164,7 @@ public class Team
 	{
 		double dist = 1e90;
 		HuntPlayer ret = null;
-		for (final HuntPlayer m : m_playerList)
+		for (final HuntPlayer m : playerList)
 		{
 			if (m.getPlayer().getWorld() != hp.getPlayer().getWorld() ||
 				!m.isOnline() ||
@@ -249,10 +180,102 @@ public class Team
 		return ret;
 	}
 
+	static private HashMap<String, Team> teamList = new HashMap<>();
+
+	/**
+	 * Gets number of teams
+	 * @return Number of teams
+	 */
+	public static int getTeamListSize()
+	{
+		return teamList.size();
+	}
+
+	/**
+	 * Adds a team
+	 * @param color Team's color (muse be unique)
+	 * @param name Team's name
+	 * @return The newly created team
+	 */
+	public static Team addTeam(TeamColor color, String name)
+	{
+		Team team;
+		team = teamList.get(name);
+		if (team != null)
+			return team;
+
+		team = new Team(color, name);
+		teamList.put(name, team);
+		return team;
+	}
+
+	/**
+	 * Gets team from name
+	 * @param name Team's name
+	 * @return The team corresponding to name
+	 */
+	public static Team getTeam(String name)
+	{
+		return teamList.get(name);
+	}
+
+	/**
+	 * Deletes team from name
+	 * @param name Team's name
+	 */
+	public static void delTeam(String name)
+	{
+		Team team = teamList.get(name);
+		HuntPlayer.forEach(hp -> {
+			if (hp.getTeam() == team)
+				hp.setTeam(null);
+		});
+		teamList.remove(name);
+	}
+
+	/**
+	 * Get whether or not a team exists
+	 * @param name The team's name
+	 * @return true If the team exists, false otherwise
+	 */
+	public static boolean teamExists(String name)
+	{
+		return teamList.get(name) != null;
+	}
+
+	/**
+	 * Get whether or not a team color is already taken
+	 * @param color The team color
+	 * @return true If the team color is taken, false otherwise
+	 */
+	public static boolean teamColorTaken(TeamColor color)
+	{
+		for (HashMap.Entry<String, Team> set : teamList.entrySet())
+		{
+			if (set.getValue().getColor() == color)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public interface ForEach
+	{
+		public void operation(final Team team);
+	}
+
+	public static void forEach(final ForEach f)
+	{
+		for (final var set : teamList.entrySet())
+			f.operation(set.getValue());
+	}
+
 	/**
 	 * Event class
 	 */
-	public static class TeamEvents implements Listener
+	public static class Events implements Listener
 	{
 		/**
 		 * Notify other players in team that this player is glowing
@@ -271,7 +294,7 @@ public class Team
 			Vector<PacketContainer> members = new Vector<>();
 
 			// Notify others & build up list
-			hp.getTeam().forAll((other) -> {
+			hp.getTeam().forAllPlayers((other) -> {
 				if (other == hp)
 					return;
 
@@ -295,21 +318,51 @@ public class Team
 			}
 		}
 
+		@EventHandler
+		public void onGameStart(final GameStartEvent ev)
+		{
+			// Force update
+			new BukkitRunnable()
+			{
+				@Override
+				public void run()
+				{
+					HuntPlayer.forEach(hp ->
+					{
+						if (hp.getTeam() == null || !hp.isOnline()) // No team or offline
+							return;
+						updateGlowing(hp);
+					});
+				}
+			}.runTaskLater(Hunt.plugin, 20);
+
+			Team.forEach(team -> {
+				// Populate player list
+				HuntPlayer.forEach(hp -> {
+					if (hp.getTeam() != team)
+						return;
+
+					team.playerList.add(hp);
+				});
+
+				// At this point, all players should be alive
+				if (!team.playerList.isEmpty())
+					team.alive = true;
+
+				// TODO: Check if this is enough to prevent target selection from selecting empty teams
+				if (!team.alive) // TODO: might need to remove using iterators...
+					teamList.remove(team);
+			});
+
+		}
 
 		/**
 		 * Set packet watcher & set glowing status once
 		 */
-		public TeamEvents()
+		public Events()
 		{
-			// Force update at start
-			for (final HuntPlayer hp : Game.getPlayerList().values())
-			{
-				if (hp.getTeam() == null) // No team
-					continue;
-				updateGlowing(hp);
-			}
 
-			ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Game.getPlugin(), ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA)
+			ProtocolLibrary.getProtocolManager().addPacketListener(new PacketAdapter(Hunt.plugin, ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA)
 			{
 				@Override
 				public void onPacketSending(PacketEvent ev)
@@ -320,10 +373,10 @@ public class Team
 					if (!(ent instanceof Player))
 						return;
 
-					final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+					final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 					if (hp.getTeam() == null)
 						return;
-					final HuntPlayer other = Game.getPlayer(ent.getName());
+					final HuntPlayer other = HuntPlayer.getPlayer(ev.getPlayer());
 
 					if (other.getTeam() != hp.getTeam())
 						return;

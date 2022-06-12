@@ -5,29 +5,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
-import org.ef3d0c3e.hunt.Messager;
-import org.ef3d0c3e.hunt.Normal;
-import org.ef3d0c3e.hunt.Pair;
-import org.ef3d0c3e.hunt.Round;
-import org.ef3d0c3e.hunt.events.HPKilledWrongEvent;
-import org.ef3d0c3e.hunt.events.HPSpawnEvent;
+import org.ef3d0c3e.hunt.*;
+import org.ef3d0c3e.hunt.events.*;
+import org.ef3d0c3e.hunt.game.Combat;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.island.IslandData;
-import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.kits.Kit;
 import org.ef3d0c3e.hunt.kits.KitJb;
 import org.ef3d0c3e.hunt.kits.KitLanczos;
@@ -39,9 +38,6 @@ import org.ef3d0c3e.hunt.stats.StatValue;
 import org.ef3d0c3e.hunt.teams.Team;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 
-import com.mojang.authlib.properties.Property;
-import com.mojang.authlib.properties.PropertyMap;
-
 import fr.mrmicky.fastboard.FastBoard;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -49,360 +45,102 @@ import net.md_5.bungee.api.chat.TextComponent;
 // Represents a player, not necessarily connected
 public class HuntPlayer implements Listener
 {
-	private OfflinePlayer m_player;
-	
-	private boolean m_alive; // Is player alive
-	private boolean m_playing; // Is playing in this game
-	private int m_score; // Current player's score
-	
-	private HuntPlayer m_target; // Player hunted by *this*
-	private HuntPlayer m_hunter; // Player hunting *this*
-	
-	private int m_skinId;
-	private Kit m_kit; // The player's kit
-	private Team m_team; // The player's team
-	private IslandData m_island;
-	Round.Data m_roundData; // State in current round
+	@Getter
+	private OfflinePlayer offlinePlayer;
+	/**
+	 * Updates underlying player
+	 * @param p Player
+	 */
+	public void setPlayer(final Player p)
+	{
+		offlinePlayer = Bukkit.getOfflinePlayer(p.getUniqueId());
+	}
 
-	private org.bukkit.scoreboard.Team m_nametagTeam; // For tag
-	private FastBoard m_fb;
-	
-	private HuntPlayer m_lastAttacker; // Who last attacked this
-	private int m_lastAttackedTime; // When was this last attacked (in seconds)
-	private int m_deathTime; // Last death time (-1 if not set) [used for JB]
+	@Getter
+	private boolean alive; // Is player alive
+	@Getter @Setter
+	private boolean playing; // Is playing in this game
+	private int score; // Current player's score
 
-	private Location m_lastPortal = null; // Last (overworld) portal entered by player
+	@Getter @Setter
+	private HuntPlayer target; // Player hunted by *this*
+	@Getter @Setter
+	private HuntPlayer hunter; // Player hunting *this*
+
+	@Getter @Setter
+	private int skin;
+	@Getter
+	private Kit kit; // The player's kit
+	@Getter
+	private Team team; // The player's team
+	@Getter @Setter
+	private IslandData islandData;
+	@Getter @Setter
+	Round.Data roundData; // State in current round
+
+	@Getter
+	private org.bukkit.scoreboard.Team nametagTeam; // For tag
+	private FastBoard fb;
+
+	@Getter
+	private Combat.Data combatData;
+	@Getter @Setter
+	private int deathTime; // Last death time (-1 if not set) [used for JB]
+
+	@Getter @Setter
+	private Location lastPortal = null; // Last (overworld) portal entered by player
 
 
-	private PlayerInteractions.InteractionsData m_interactions = null;
-	private HashMap<String, StatValue> m_stats; ///< List of stats associated with player
+	@Getter
+	private PlayerInteractions.InteractionsData interactions = null;
+	@Getter
+	private HashMap<String, StatValue> stats; ///< List of stats associated with player
 
 	public HuntPlayer(Player p)
 	{
-		m_alive = false;
-		m_playing = false;
-		m_score = 0;
-		m_target = null;
-		m_hunter= null;
-		m_skinId = -1;
-		m_kit = null;
-		m_team = null;
-		m_island = null;
-		m_roundData = new Round.Data();
-		m_fb = null;
-		m_lastAttacker = null;
-		m_lastAttackedTime = 0;
-		m_deathTime = -1;
-		m_interactions = new PlayerInteractions.InteractionsData();
-		m_stats = new HashMap<>();
+		offlinePlayer = p;
+		alive = false;
+		playing = false;
+		score = 0;
+		target = null;
+		hunter= null;
+		skin = -1;
+		kit = null;
+		team = null;
+		islandData = null;
+		roundData = new Round.Data();
+		fb = null;
+		combatData = new Combat.Data();
+		deathTime = -1;
+		interactions = new PlayerInteractions.InteractionsData();
+		stats = new HashMap<>();
 	}
 	
 	//-------//
 	// Hooks //
 	//-------//
-	public void onConnect(Player p)
-	{
-		m_player = Bukkit.getOfflinePlayer(p.getUniqueId());
-		m_fb = new FastBoard(p);
-		StatSaves.load(this);
 
-		if (!Game.hasStarted())
-		{
-			p.setGameMode(GameMode.ADVENTURE);
-			
-			// Skins
-			p.getInventory().remove(HuntItems.getSkinSelector());
-			p.getInventory().addItem(HuntItems.getSkinSelector());
-			// Kits
-			if (Game.isKitMode())
-			{
-				setKit(null);
-				p.getInventory().remove(HuntItems.getKitSelector());
-				p.getInventory().addItem(HuntItems.getKitSelector());
-			}
-			// Team
-			if (Game.isTeamMode())
-			{
-				setTeam(null);
-				p.getInventory().remove(HuntItems.getTeamSelector());
-				p.getInventory().addItem(HuntItems.getTeamSelector());
-			}
-			// Stats
-			p.getInventory().remove(HuntItems.getStatsMenu());
-			p.getInventory().addItem(HuntItems.getStatsMenu());
-		}
-		else if (!isAlive())
-			getPlayer().setGameMode(GameMode.SPECTATOR);
-		
-		// Update player skin
-		if (getSkin() != -1)
-			setSkin(getSkin());
-		
-		updateScoreboard();
-		updateTablist();
-		updateTabname();
-		updateNametag();
-		updateHealth();
-
-		// Load achievement progress
-		new BukkitRunnable()
-		{
-			@Override
-			public void run()
-			{
-				HuntAchievement.getManager().addPlayer(p);
-				//HuntAchievement.getManager().loadProgress(p, HuntAchievement.getSave()); TODO
-				HuntAchievement.HUNT.award(p, 1);
-			}
-		}.runTaskLater(Game.getPlugin(), 2);
-
-		// Call interactions hook
-		m_interactions.onJoin(this);
-	}
-
-	public void onQuit(Player p)
-	{
-		StatSaves.save(this);
-		if (Game.hasStarted())
-			return;
-		setKit(null);
-		setTeam(null);
-	}
-	
 	public void spreadRandom()
 	{
 		Bukkit.getServer().dispatchCommand(Bukkit.getServer().getConsoleSender(),
 				String.format("spreadplayers 0 0 0 %d false %s", Math.abs(Game.getBorderRadius() - 10), getName()) );
 	}
-	
-	/**
-	 * Called when a player gets damaged by another player
-	 * @param ev The damage event
-	 * @param attacker Player damaging this
-	 * @param direct Whether attacker directly damaged player (set to false if player is taking damage from other source)
-	 */
-	public void onDamageByPlayer(EntityDamageEvent ev, HuntPlayer attacker, boolean direct)
-	{
-		if (direct)
-			setKiller(attacker);
-
-		if (Game.isRoundMode())
-			Round.setLastDamaged(Game.getTime());
-		
-		// FIXME: P1 and P2 are using JB
-		// -> P1 'Kills' P2
-		// -> P1 Dies from curse
-		// [P2 Should be resuscited and get the curse]
-		// -> P2 Gets cursed (as spectator) and nothing happens after the curse ends...
-		if (ev.getFinalDamage() >= getPlayer().getHealth())
-		{
-			ev.setCancelled(true);
-			if (attacker.canKill(this))
-			{
-				HuntPlayer victim = this;
-				new BukkitRunnable()
-				{
-					int seconds = 0;
-					Location loc = null;
-					public void end()
-					{
-						if (Game.isKitMode() && KitLanczos.KitLanczosPreDeathHook(victim))
-							return;
-
-						// Give player's skull to killer
-						PlayerInteractions.giveItem(attacker, new ItemStack[] { HuntItems.getDeathSkull(victim) }, true, true);
-
-						// Set death time
-						victim.setDeathTime(Game.getTime());
-
-						if (!Game.isRoundMode() || (attacker.getRoundData().isAlive() && victim.getRoundData().isAlive()))
-						{
-							attacker.setScore(attacker.getScore() + 3);
-							if (Game.isTeamMode())
-								attacker.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §7Vous avez tué {0}§7, votre équipe gagne §e3 §7points.", getTeamColoredName()));
-							else
-								attacker.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §7Vous avez tué §b{0}§7, vous gagnez §e3 §7points.", getName()));
-						}
-
-						for (HuntPlayer hp : Game.getPlayerList().values())
-						{
-							if (hp == attacker)
-								continue;
-							if (!hp.isAlive() || hp == victim) // Send custom message
-							{
-								if (hp.isOnline())
-								{
-									if (Game.isTeamMode())
-										hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7.", attacker.getTeamColoredName(), victim.getTeamColoredName()));
-									else
-										hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §b{0}§7 a tué §b{1}§7.", attacker.getName(), victim.getName()));
-								}
-								continue;
-							}
-							if (!hp.isOnline())
-								continue;
-							if (Game.isTeamMode() && !Game.isRoundMode())
-							{
-								if (hp.getTeam() == attacker.getTeam())
-									hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7, votre équipe gagne §e3 §7point.", attacker.getTeamColoredName(), victim.getTeamColoredName()));
-								else if (hp.getTeam() != getTeam())
-									hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7, tout les équipes en vie gagnent §e1 §7point.", attacker.getTeamColoredName(), victim.getTeamColoredName()));
-							}
-							else if (!Game.isRoundMode())
-							{
-								hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §b{0}§7 a tué §b{1}§7, tout les joueurs en vie gagnent §e1 §7point.", attacker.getName(), victim.getName()));
-								hp.setScore(hp.getScore()+1);
-							}
-						}
-						if (Game.isTeamMode() && !Game.isRoundMode())
-						{
-							for (Team team : Game.getTeamList().values())
-							{
-								if (team.isAlive() &&
-									team != attacker.getTeam() &&
-									team != getTeam())
-									team.setScore(team.getScore()+1);
-							}
-						}
-
-						if (!Game.isRoundMode())
-							Normal.onDeath(victim, attacker);
-						else
-							Round.onDeath(victim, attacker);
-					}
-					@Override
-					public void run()
-					{
-						if (!Game.isKitMode() || (victim.getKit() == null || !(victim.getKit() instanceof KitJb)))
-						{
-							end();
-							cancel();
-							return;
-						}
-						else if (seconds == 0)
-						{
-							attacker.getPlayer().sendTitle("§4§lMAUDIT!", "§cSURVIVEZ POUR GAGNER VOTRE KILL...", 5, 100, 20);
-							victim.getPlayer().sendTitle("§4§lMorts...", "§7Sauf si votre assassin vient à mourir...", 5, 100, 20);
-							
-							loc = victim.getPlayer().getLocation();
-							victim.getPlayer().setGameMode(GameMode.SPECTATOR);
-							loc.getWorld().spawnEntity(loc, EntityType.BAT);
-							loc.getWorld().spawnParticle(Particle.SQUID_INK, loc, 150, 0.4, 1.3, 0.4);
-						
-							attacker.setKiller(victim); // Register victim as attacker's killer to grant kill if attacker dies from curse
-							attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
-							attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.HUNGER, 100, 1));
-							attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0));
-						}
-						// Kill if disconnect
-						else if (attacker.getDeathTime()+1 == Game.getTime() || !attacker.isOnline() || seconds == 5)
-						{
-							if (attacker.getDeathTime()+1 != Game.getTime() && attacker.isOnline())
-							{
-								end();
-								attacker.getPlayer().sendTitle("§4Chasseur de Vampire!", "§cVous avez survécu à la malédiction!", 5, 100, 20);
-							 	attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 5, 1));
-							 	attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 4, 0));
-							 	attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 5, 1));
-
-								HuntAchievement.VAMPIRE_KILL.award(attacker.getPlayer(), 1);
-							}
-							else
-							{
-								victim.getPlayer().teleport(loc);
-								victim.getPlayer().sendTitle("§4Dracula!", "§cVous voilà ressuscité.", 5, 100, 20);
-								victim.getPlayer().setGameMode(GameMode.SURVIVAL);
-							 	victim.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 3, 1));
-							 	victim.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, 4, 0));
-							 	victim.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 4, 1));
-								HuntAchievement.VAMPIRE_REVIVE.award(victim.getPlayer(), 1);
-
-								// Force kill if offline
-								if (!attacker.isOnline())
-								{
-									// FIXME: If player reconnects at round end, then he won't be counted as dead (still alive at end of round)
-									PlayerInteractions.damage(attacker, 9999, victim);
-								}
-							}
-							//attacker.setDeathTime(-1); // Resets it
-							cancel();
-						}
-						++seconds;
-					}
-				}.runTaskTimer(Game.getPlugin(), 0, 20);
-			}
-			else
-			{
-				attacker.spreadRandom();
-				getPlayer().setHealth(getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-				getPlayer().setFireTicks(0);
-				attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 60, 0));
-				attacker.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
-
-				if (Game.isTeamMode())
-				{
-					getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de vous tuer, {0} §7a fait perdre §e2 §7points à son équipe.", attacker.getTeamColoredName()));
-					attacker.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer {0}§7, votre équipe a perdu §e2 §7points.", getTeamColoredName()));
-				}
-				else
-				{
-					getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de vous tuer, §b{0} §7a perdu §e2 §7points.", attacker.getName()));
-					attacker.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer §b{0}§7, vous avez perdu §e2 §7points.", getName()));
-				}
-				attacker.getPlayer().playSound(attacker.getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 65536.f, 1.f);
-				getPlayer().playSound(getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 65536.f, 1.f);
-
-				// Kits Hooks
-				if (Game.isKitMode() && attacker.getKit() != null)
-					Bukkit.getPluginManager().callEvent(new HPKilledWrongEvent(this, attacker));
-
-				attacker.setScore(attacker.getScore() - 2);
-			}
-			if (Game.isTeamMode()) // Update scoreboard for team members (even dead members...)
-			{
-				for (final HuntPlayer hp : attacker.getTeam().getPlayerList())
-				{
-					if (!hp.isOnline())
-						continue;
-					hp.updateScoreboard();
-					if (hp != attacker)
-						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer {0}§7, {1}§7 a fait perdre §22 §7points à votre équipe.", getTeamColoredName(), attacker.getTeamColoredName()));
-				}
-			}
-			else
-				attacker.updateScoreboard();
-		}
-	}
-	
-	public void registerAttack(HuntPlayer attacker)
-	{
-		if (!Game.inHunt() || attacker == this)
-			return;
-		m_lastAttacker = attacker;
-		m_lastAttackedTime = Game.getTime();
-	}
-	
 	//---------//
 	// Getters //
 	//---------//
-	public OfflinePlayer getOfflinePlayer()
-	{
-		return m_player;
-	}
-	
 	public Player getPlayer()
 	{
-		return m_player.getPlayer();
+		return getOfflinePlayer().getPlayer();
 	}
 	
 	public boolean isOnline()
 	{
-		return m_player.isOnline();
+		return getOfflinePlayer().isOnline();
 	}
 	
 	public String getName()
 	{
-		return m_player.getPlayer().getName();
+		return getOfflinePlayer().getName();
 	}
 
 	/**
@@ -411,7 +149,7 @@ public class HuntPlayer implements Listener
 	 */
 	public String getTeamColoredName()
 	{
-		return Messager.getColored(MessageFormat.format("{0}{1}", m_team.getColor().color, m_player.getPlayer().getName()));
+		return Messager.getColored(MessageFormat.format("{0}{1}", getTeam().getColor().color, getName()));
 	}
 
 	/**
@@ -420,25 +158,7 @@ public class HuntPlayer implements Listener
 	 */
 	public UUID getUUID()
 	{
-		return m_player.getPlayer().getUniqueId();
-	}
-
-	/**
-	 * Gets whether player is alive or not
-	 * @return True if player is alive
-	 */
-	public boolean isAlive()
-	{
-		return m_alive;
-	}
-
-	/**
-	 * Gets whether player is part of the game or not
-	 * @return True if player is poart of the game
-	 */
-	public boolean isPlaying()
-	{
-		return m_playing;
+		return getOfflinePlayer().getUniqueId();
 	}
 
 	/**
@@ -452,26 +172,14 @@ public class HuntPlayer implements Listener
 
 	/**
 	 * Gets player's score (or player team's score if teams are on)
-	 * @return Player team's score if teams are on, player's score otherwise
+	 * @return If teams are on, player team's score; otherwise player's score
 	 */
 	public int getScore()
 	{
 		if (Game.isTeamMode())
-			return m_team.getScore();
+			return getTeam().getScore();
 		else
-			return m_score;
-	}
-
-	/**
-	 * Gets player that would be awarded if this was to die
-	 * @return The player that would be awarded this' death
-	 * @note Returns null if no players would be awarded
-	 */
-	public HuntPlayer getKiller()
-	{
-		if (Game.getTime() - m_lastAttackedTime > 8)
-			return null;
-		return m_lastAttacker;
+			return score;
 	}
 
 	/**
@@ -482,112 +190,11 @@ public class HuntPlayer implements Listener
 	public boolean canKill(HuntPlayer hp)
 	{
 		if (Game.isTeamMode())
-			return m_team.getTarget() == hp.getTeam() || hp.getTeam().getTarget() == m_team;
+			return team.getTarget() == hp.getTeam() || hp.getTeam().getTarget() == team;
 		else if (Game.isRoundMode() && !(getRoundData().isGhost() || hp.getRoundData().isGhost()) )
 			return true;
 		else
-			return m_target == hp || hp.m_target == this;
-	}
-
-	/**
-	 * Gets this' target
-	 * @return Player targeted by this
-	 * @note Use ```getTeam().getTarget()``` for team mode
-	 */
-	public HuntPlayer getTarget()
-	{
-		return m_target;
-	}
-
-	/**
-	 * Gets this' hunter
-	 * @return Player targeting this
-	 * @note Use ```getTeam().getHunter()``` for team mode
-	 */
-	public HuntPlayer getHunter()
-	{
-		return m_hunter;
-	}
-
-	/**
-	 * Gets player's custom skin id
-	 * @return Player's skin id (-1 for none)
-	 */
-	public int getSkin()
-	{
-		return m_skinId;
-	}
-
-	/**
-	 * Gets player's kit
-	 * @return Player's kit
-	 */
-	public Kit getKit()
-	{
-		return m_kit;
-	}
-
-	/**
-	 * Gets player's team
-	 * @return Player's team
-	 */
-	public Team getTeam()
-	{
-		return m_team;
-	}
-
-	/**
-	 * Gets player's island data
-	 * @return Player's island data
-	 */
-	public IslandData getIsland()
-	{
-		return m_island;
-	}
-
-	/**
-	 * Gets player's round data
-	 * @return Player's round data
-	 */
-	public Round.Data getRoundData()
-	{
-		return m_roundData;
-	}
-
-	/**
-	 * Gets time player died
-	 * @return Time when player died (in seconds, -1 for not set)
-	 */
-	public int getDeathTime()
-	{
-		return m_deathTime;
-	}
-
-	/**
-	 * Sets time when player died
-	 * @param seconds Seconds during which player died
-	 */
-	public void setDeathTime(final int seconds)
-	{
-		m_deathTime = seconds;
-	}
-
-	/**
-	 * Gets player's last portal's location
-	 * @return Player's last portal's location
-	 */
-	public Location getLastPortal()
-	{
-		return m_lastPortal;
-	}
-
-	/**
-	 * Get player interactions manager
-	 * @return Player Interactions for this playe
-	 */
-	public PlayerInteractions.InteractionsData getInteractions()
-	{
-		return m_interactions;
+			return getTarget() == hp || hp.getTarget() == this;
 	}
 
 	/**
@@ -597,7 +204,7 @@ public class HuntPlayer implements Listener
 	 */
 	public StatValue getStat(final String key)
 	{
-		return m_stats.get(key);
+		return getStats().get(key);
 	}
 
 	/**
@@ -607,7 +214,7 @@ public class HuntPlayer implements Listener
 	 */
 	public void setStat(final String key, final StatValue value)
 	{
-		m_stats.put(key, value);
+		getStats().put(key, value);
 	}
 
 	/**
@@ -616,7 +223,7 @@ public class HuntPlayer implements Listener
 	 */
 	public void incStat(final String key)
 	{
-		final StatLong s = (StatLong)m_stats.get(key);
+		final StatLong s = (StatLong)getStats().get(key);
 		++s.value;
 	}
 
@@ -628,11 +235,11 @@ public class HuntPlayer implements Listener
 	public boolean canDamage(HuntPlayer other)
 	{
 		if (!Game.isTeamMode())
-			return Game.inHunt() && !(m_roundData.isGhost() || other.m_roundData.isGhost());
-		if (m_team == other.m_team)
+			return Game.inHunt() && !(getRoundData().isGhost() || other.getRoundData().isGhost());
+		if (getTeam() == other.getTeam())
 			return false;
 		else
-			return Game.inHunt() && !(m_roundData.isGhost() || other.m_roundData.isGhost());
+			return Game.inHunt() && !(getRoundData().isGhost() || other.getRoundData().isGhost());
 	}
 	
 	//---------//
@@ -641,14 +248,14 @@ public class HuntPlayer implements Listener
 
 	/**
 	 * Sets player's score
-	 * @param score New player's score
+	 * @param score Player's new score
 	 */
-	public void setScore(int score)
+	public void setScore(final int score)
 	{
 		if (Game.isTeamMode())
-			m_team.setScore(score);
+			getTeam().setScore(score);
 		else
-			m_score = score;
+			this.score = score;
 	}
 
 	/**
@@ -657,75 +264,9 @@ public class HuntPlayer implements Listener
 	 */
 	public void setAlive(boolean alive)
 	{
-		m_alive = alive;
+		this.alive = alive;
 		if (Game.isTeamMode())
-			m_team.updateAlive();
-	}
-
-	/**
-	 * Sets whether player is playing or not
-	 * @param playing Whether player is playing or not
-	 */
-	public void setPlaying(boolean playing)
-	{
-		m_playing = playing;
-	}
-
-	/**
-	 * Sets player that would be awarded this' death
-	 * @param killer Player that would be awarded this' death
-	 */
-	public void setKiller(HuntPlayer killer)
-	{
-		m_lastAttacker = killer;
-		m_lastAttackedTime = Game.getTime();
-	}
-
-	/**
-	 * Sets player's target
-	 * @param target New player's target
-	 */
-	public void setTarget(HuntPlayer target)
-	{
-		m_target = target;
-	}
-
-	/**
-	 * Sets player's hunter
-	 * @param hunter New player's hunter
-	 */
-	public void setHunter(HuntPlayer hunter)
-	{
-		m_hunter = hunter;
-	}
-
-	/**
-	 * Sets player's custom skin id
-	 * @param skinId Player's new skin id
-	 */
-	public void setSkin(int skinId)
-	{
-		m_skinId = skinId;
-		if (m_skinId == -1)
-			return;
-		Skin skin = Skin.getList().get(m_skinId);
-		PropertyMap pm = ((net.minecraft.world.entity.player.Player) ((CraftPlayer)getPlayer()).getHandle() ).getGameProfile().getProperties();
-		Property prop = pm.get("textures").iterator().next();
-		
-		pm.remove("textures", prop);
-		pm.put("textures", new Property("textures", skin.getTexture(), skin.getSignature()));
-		
-		for (Player p : Bukkit.getOnlinePlayers())
-		{
-			if (p == getPlayer())
-				continue;
-			p.hidePlayer(Game.getPlugin(), getPlayer());
-			p.showPlayer(Game.getPlugin(), getPlayer());
-		}
-
-		// Spawn particles
-		getPlayer().getWorld().spawnParticle(Particle.REDSTONE, getPlayer().getLocation(), 80, 0.25, 0.80, 0.25, 1.0, new Particle.DustOptions(Color.ORANGE, 1.f));
-		getPlayer().getWorld().spawnParticle(Particle.GLOW_SQUID_INK, getPlayer().getLocation(), 25, 0.15, 0.3, 0.15, 0.3);
+			getTeam().updateAlive();
 	}
 
 	/**
@@ -734,11 +275,11 @@ public class HuntPlayer implements Listener
 	 */
 	public void setKit(Kit kit)
 	{
-		if (m_kit != null)
-			KitMenu.setTaken(m_kit, false);
-		m_kit = kit;
-		if (m_kit != null)
-			KitMenu.setTaken(m_kit, true);
+		if (getKit() != null)
+			KitMenu.setTaken(getKit(), false);
+		this.kit = kit;
+		if (getKit() != null)
+			KitMenu.setTaken(getKit(), true);
 		updateScoreboard();
 		updateTabname();
 	}
@@ -749,39 +290,11 @@ public class HuntPlayer implements Listener
 	 */
 	public void setTeam(Team team)
 	{
-		m_team = team;
+		this.team = team;
 		updateScoreboard();
 		updateTabname();
 		updateNametag();
 	}
-
-	/**
-	 * Sets player's island data
-	 * @param island Player's new island data
-	 */
-	public void setIsland(IslandData island)
-	{
-		m_island = island;
-	}
-
-	/**
-	 * Sets player's round data
-	 * @param data Player's new round data
-	 */
-	public void setRoundData(Round.Data data)
-	{
-		m_roundData = data;
-	}
-
-	/**
-	 * Sets player's last portal's location
-	 * @param portal Player's new last portal's location
-	 */
-	public void setLastPortal(final Location portal)
-	{
-		m_lastPortal = portal;
-	}
-
 
 	/**
 	 * Revive player
@@ -819,7 +332,7 @@ public class HuntPlayer implements Listener
 	 */
 	public void updateScoreboard()
 	{
-		m_fb.updateTitle("§b🗡 §6§lHUNT§b 🪓");
+		fb.updateTitle("§b🗡 §6§lHUNT§b 🪓");
 		ArrayList<String> l = new ArrayList<String>();
 		l.ensureCapacity(6);
 
@@ -828,7 +341,7 @@ public class HuntPlayer implements Listener
 			if (!Game.isRoundMode())
 				l.add(MessageFormat.format("§7En vie: §e{0}", Game.getPlayerNum()));
 			else
-				l.add(MessageFormat.format("§7En vie: §e{0}", Round.getNumberAlive()));
+				l.add(MessageFormat.format("§7En vie: §e{0}", Round.getAliveNum()));
 			l.add(MessageFormat.format("§7Score: §e{0}", getScore()));
 			if (!Game.isTeamMode())
 			{
@@ -846,7 +359,7 @@ public class HuntPlayer implements Listener
 			l.add("§0");
 			l.add(MessageFormat.format("§7Border: §a+{0}", Game.getBorderRadius()));
 			if (Game.isRoundMode() && Game.inHunt())
-				l.add(MessageFormat.format("§7Round: §d{0}§7/§d{1}", Round.getCurrentRound(), Round.getRounds()));
+				l.add(MessageFormat.format("§7Round: §d{0}§7/§d{1}", Round.getCurrentRound(), Round.getRoundNum()));
 
 			if (Game.isRoundMode() && Game.inHunt())
 			{
@@ -858,7 +371,7 @@ public class HuntPlayer implements Listener
 				else
 					lsecs = MessageFormat.format("{0}", left.second);
 
-				final Pair<Integer, Integer> prol = Round.getProlongations();
+				final Pair<Integer, Integer> prol = Round.getProlongationsDisplay();
 				String pmins, psecs;
 				pmins = MessageFormat.format("{0}", prol.first);
 				if (prol.second < 10)
@@ -887,39 +400,39 @@ public class HuntPlayer implements Listener
 			if (Game.isKitMode() && Game.isTeamMode())
 			{
 				l.add("§7La partie va commencer!");
-				if (m_kit == null && m_team == null)
+				if (getKit() == null && getTeam() == null)
 					l.add("§7Choisissez un §nkit§7 et une §néquipe");
 				else
 				{
-					if (m_kit == null)
+					if (getKit() == null)
 						l.add("§7Choisissez un §nkit");
 					else
-						l.add(MessageFormat.format("§7Kit: §a{0}", m_kit.getDisplayName()));
-					if (m_team == null)
+						l.add(MessageFormat.format("§7Kit: §a{0}", getKit().getDisplayName()));
+					if (getTeam() == null)
 						l.add("§7Choisissez une §néquipe");
 					else
 						l.add(
-							Messager.getColored(MessageFormat.format("§7Équipe: {0}", m_team.getColoredName()))
+							Messager.getColored(MessageFormat.format("§7Équipe: {0}", getTeam().getColoredName()))
 						);
 				}
 			}
 			else if (Game.isKitMode())
 			{
 				l.add("§7La partie va commencer!");
-				if (m_kit == null)
+				if (getKit() == null)
 					l.add("§7Choisissez un §nkit");
 				else
-					l.add(MessageFormat.format("§7Kit: §a{0}", m_kit.getDisplayName()));
+					l.add(MessageFormat.format("§7Kit: §a{0}", getKit().getDisplayName()));
 
 			}
 			else if (Game.isTeamMode())
 			{
 				l.add("§7La partie va commencer!");
-				if (m_team == null)
+				if (getTeam() == null)
 					l.add("§7Choisissez une §néquipe");
 				else
 					l.add(
-						Messager.getColored(MessageFormat.format("§7Équipe: {0}", m_team.getColoredName()))
+						Messager.getColored(MessageFormat.format("§7Équipe: {0}", getTeam().getColoredName()))
 					);
 			}
 			else
@@ -928,7 +441,7 @@ public class HuntPlayer implements Listener
 			}
 		}
 
-		m_fb.updateLines(l);
+		fb.updateLines(l);
 	}
 
 	/**
@@ -944,7 +457,7 @@ public class HuntPlayer implements Listener
 				+ "§b§lVersion:§e 3.6 §7§o[/changelog]\n"
 				+ "§c§lSite internet:§d pundalik.org/hunt\n";
 		
-		m_player.getPlayer().setPlayerListHeaderFooter(header, footer);
+		getPlayer().setPlayerListHeaderFooter(header, footer);
 	}
 
 	/**
@@ -952,22 +465,22 @@ public class HuntPlayer implements Listener
 	 */
 	public void updateTabname()
 	{
-		Player p = m_player.getPlayer();
+		Player p = getPlayer();
 		String color, prefix, suffix;
 		if (Game.hasStarted() && !isAlive()) // Player is dead
 			color = "§7§o";
 		else
 			color = "§e";
-		if (Game.isKitMode() && m_kit != null)
-			suffix = " §7" + m_kit.getDisplayName();
+		if (Game.isKitMode() && getKit() != null)
+			suffix = " §7" + getKit().getDisplayName();
 		else
 			suffix = "";
 		prefix = "";
 
-		if (Game.isTeamMode() && m_team != null)
+		if (Game.isTeamMode() && getTeam() != null)
 		{
-			prefix += Messager.getColored(m_team.getColor().color) + "§l" + m_team.getName() + " §8: §r";
-			color += Messager.getColored(m_team.getColor().color);
+			prefix += Messager.getColored(getTeam().getColor().color) + "§l" + getTeam().getName() + " §8: §r";
+			color += Messager.getColored(getTeam().getColor().color);
 		}
 
 		if (Game.isRoundMode() && !getRoundData().isAlive())
@@ -990,28 +503,28 @@ public class HuntPlayer implements Listener
 	 */
 	public void updateNametag()
 	{
-		if (m_nametagTeam == null)
+		if (getNametagTeam() == null)
 		{
-			m_nametagTeam = Bukkit.getScoreboardManager().getMainScoreboard().getTeam(getName());
-			if (m_nametagTeam == null)
-				m_nametagTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam(getName());
-			m_nametagTeam.setOption(org.bukkit.scoreboard.Team.Option.COLLISION_RULE, org.bukkit.scoreboard.Team.OptionStatus.NEVER); // Just set this once
+			nametagTeam = Bukkit.getScoreboardManager().getMainScoreboard().getTeam(getName());
+			if (getNametagTeam() == null)
+				nametagTeam = Bukkit.getScoreboardManager().getMainScoreboard().registerNewTeam(getName());
+			getNametagTeam().setOption(org.bukkit.scoreboard.Team.Option.COLLISION_RULE, org.bukkit.scoreboard.Team.OptionStatus.NEVER); // Just set this once
 		}
 
 		//TODO: Round+TEAM
-		m_nametagTeam.setPrefix("");
-		m_nametagTeam.setSuffix("");
+		getNametagTeam().setPrefix("");
+		getNametagTeam().setSuffix("");
 		if (Game.isTeamMode())
 		{
-			if (m_team != null)
+			if (getTeam() != null)
 			{
-				m_nametagTeam.setPrefix(Messager.getColored(m_team.getColor().color) + "§l" + m_team.getName() + " ");
-				m_nametagTeam.setColor(ChatColor.DARK_GRAY);
+				getNametagTeam().setPrefix(Messager.getColored(getTeam().getColor().color) + "§l" + getTeam().getName() + " ");
+				getNametagTeam().setColor(ChatColor.DARK_GRAY);
 			}
 			else
 			{
-				m_nametagTeam.setPrefix("§7§o<sans équipe> ");
-				m_nametagTeam.setColor(ChatColor.DARK_GRAY);
+				getNametagTeam().setPrefix("§7§o<sans équipe> ");
+				getNametagTeam().setColor(ChatColor.DARK_GRAY);
 			}
 		}
 		else
@@ -1020,30 +533,30 @@ public class HuntPlayer implements Listener
 			{
 				if (getRoundData().isAlive())
 				{
-					m_nametagTeam.setColor(ChatColor.YELLOW);
-					m_nametagTeam.setPrefix("");
+					getNametagTeam().setColor(ChatColor.YELLOW);
+					getNametagTeam().setPrefix("");
 				}
 				else if (getRoundData().isZombie())
 				{
-					m_nametagTeam.setColor(ChatColor.GOLD);
-					m_nametagTeam.setPrefix("§2§lZOMBIE ");
-					m_nametagTeam.setSuffix(" §c☠");
+					getNametagTeam().setColor(ChatColor.GOLD);
+					getNametagTeam().setPrefix("§2§lZOMBIE ");
+					getNametagTeam().setSuffix(" §c☠");
 				}
 				else if (getRoundData().isGhost())
 				{
-					m_nametagTeam.setColor(ChatColor.GOLD);
-					m_nametagTeam.setPrefix("§8§lFANTÔME ");
-					m_nametagTeam.setSuffix(" §c☠");
+					getNametagTeam().setColor(ChatColor.GOLD);
+					getNametagTeam().setPrefix("§8§lFANTÔME ");
+					getNametagTeam().setSuffix(" §c☠");
 				}
 			}
 			else
 			{
-				m_nametagTeam.setColor(ChatColor.YELLOW);
+				getNametagTeam().setColor(ChatColor.YELLOW);
 			}
 		}
 		
-		if (m_nametagTeam.getEntries().isEmpty()) // Should only ever contain a single player
-			m_nametagTeam.addEntry(getName());
+		if (getNametagTeam().getEntries().isEmpty()) // Should only ever contain a single player
+			getNametagTeam().addEntry(getName());
 	}
 
 	/**
@@ -1060,20 +573,20 @@ public class HuntPlayer implements Listener
 		for (Player p : Bukkit.getOnlinePlayers())
 			obj.getScore(p.getName()).setScore((int)p.getHealth());;
 	}
-	
+
 	public boolean updateTracking(boolean reverse)
 	{
 		if (Game.isTeamMode())
 		{
 			if (!reverse)
 			{
-				if (m_team.getTarget() == null)
+				if (getTeam().getTarget() == null)
 				{
 					getPlayer().sendMessage("§cVous n'avez pas de cible!");
 					return false;
 				}
 
-				final HuntPlayer closest = m_team.getTarget().getClosestPlayer(this);
+				final HuntPlayer closest = getTeam().getTarget().getClosestPlayer(this);
 				if (closest == null)
 				{
 					getPlayer().sendMessage("§cAucun joueur à traquer!");
@@ -1086,13 +599,13 @@ public class HuntPlayer implements Listener
 			}
 			else
 			{
-				if (m_team.getHunter() == null)
+				if (getTeam().getHunter() == null)
 				{
 					getPlayer().sendMessage("§cVous n'avez pas de chasseur!");
 					return false;
 				}
 
-				final HuntPlayer closest = m_team.getHunter().getClosestPlayer(this);
+				final HuntPlayer closest = getTeam().getHunter().getClosestPlayer(this);
 				if (closest == null)
 				{
 					getPlayer().sendMessage("§cAucun joueur à traquer!");
@@ -1109,50 +622,90 @@ public class HuntPlayer implements Listener
 			// NOTE: [Tom] if m_target is null then m_hunter is too
 			if (!reverse)
 			{
-				if (m_target == null)
+				if (getTarget() == null)
 				{
 					getPlayer().sendMessage("§cVous n'avez pas de cible!");
 					return false;
 				}
 
-				if (!m_target.isOnline())
+				if (!getTarget().isOnline())
 				{
 					getPlayer().sendMessage("§cVotre cible est déconnectée!");
 					return false;
-				} else if (m_target.getPlayer().getWorld() != getPlayer().getWorld())
+				} else if (getTarget().getPlayer().getWorld() != getPlayer().getWorld())
 				{
 					getPlayer().sendMessage("§cVotre cible est dans une autre dimension.");
 					return false;
 				}
 
-				getPlayer().setCompassTarget(m_target.getPlayer().getLocation());
-				getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(MessageFormat.format("§b§l>>>§e §lDistance§e: {0}m §b§l<<<", getPlayer().getLocation().distance(m_target.getPlayer().getLocation()))));
+				getPlayer().setCompassTarget(getTarget().getPlayer().getLocation());
+				getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(MessageFormat.format("§b§l>>>§e §lDistance§e: {0}m §b§l<<<", getPlayer().getLocation().distance(getTarget().getPlayer().getLocation()))));
 				return true;
 			}
 			else
 			{
-				if (m_hunter == null)
+				if (getHunter() == null)
 				{
 					getPlayer().sendMessage("§cVous n'avez pas de chasseur!");
 					return false;
 				}
 
-				if (!m_hunter.isOnline())
+				if (!getHunter().isOnline())
 				{
 					getPlayer().sendMessage("§cVotre chasseur est déconnecté!");
 					return false;
 				}
-				else if (m_hunter.getPlayer().getWorld() != getPlayer().getWorld())
+				else if (getHunter().getPlayer().getWorld() != getPlayer().getWorld())
 				{
 					getPlayer().sendMessage("§cVotre chasseur est dans une autre dimension.");
 					return false;
 				}
 
-				getPlayer().setCompassTarget(m_hunter.getPlayer().getLocation());
-				getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(MessageFormat.format("§b§l>>>§e §lDistance§e: {0}m §b§l<<<", getPlayer().getLocation().distance(m_hunter.getPlayer().getLocation()))));
+				getPlayer().setCompassTarget(getHunter().getPlayer().getLocation());
+				getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(MessageFormat.format("§b§l>>>§e §lDistance§e: {0}m §b§l<<<", getPlayer().getLocation().distance(getHunter().getPlayer().getLocation()))));
 				return true;
 			}
 		}
+	}
+
+	static private HashMap<String, HuntPlayer> playerList = new HashMap<>();
+
+	/**
+	 * Adds a player to the player list
+	 * @param p The player to add
+	 * @return A HuntPlayer object corresponding to the player
+	 */
+	public static HuntPlayer addPlayer(Player p)
+	{
+		HuntPlayer hp;
+		hp = playerList.get(p.getName());
+		if (hp != null)
+			return hp;
+
+		// Unknown player
+		hp = new HuntPlayer(p);
+		playerList.put(p.getName(), hp);
+		return hp;
+	}
+
+	/**
+	 * Gets player from playerlist by his name
+	 * @param player The bukkit player
+	 * @return HuntPlayer associated with name (null if no player is found)
+	 */
+	public static HuntPlayer getPlayer(final Player player)
+	{
+		return playerList.get(player.getName());
+	}
+
+	/**
+	 * Gets player from playerlist by his name
+	 * @param name Player's name
+	 * @return HuntPlayer associated with name (null if no player is found)
+	 */
+	public static HuntPlayer getPlayer(final String name)
+	{
+		return playerList.get(name);
 	}
 
 	public interface ForEach
@@ -1162,7 +715,284 @@ public class HuntPlayer implements Listener
 
 	static public void forEach(final ForEach f)
 	{
-		for (final HuntPlayer hp : Game.getPlayerList().values())
+		for (final HuntPlayer hp : playerList.values())
 			f.operation(hp);
+	}
+
+	public static class Events implements Listener
+	{
+		@EventHandler
+		public void onJoin(final HPlayerJoinEvent ev)
+		{
+			final HuntPlayer hp = ev.getPlayer();
+			Bukkit.broadcastMessage(MessageFormat.format("§8[§a+§8] §7{0}", hp.getName()));
+
+			hp.fb = new FastBoard(hp.getPlayer());
+			StatSaves.load(hp);
+
+			if (Game.hasStarted() && !hp.isAlive())
+				hp.getPlayer().setGameMode(GameMode.SPECTATOR);
+
+			Skin.updatePlayerSkin(hp);
+
+			hp.updateScoreboard();
+			hp.updateTablist();
+			hp.updateTabname();
+			hp.updateNametag();
+			hp.updateHealth();
+
+			// Load achievement progress
+			new BukkitRunnable() // TODO: EV move into
+			{
+				@Override
+				public void run()
+				{
+					HuntAchievement.getManager().addPlayer(hp.getPlayer());
+					//HuntAchievement.getManager().loadProgress(p, HuntAchievement.getSave()); TODO
+					HuntAchievement.HUNT.award(hp.getPlayer(), 1);
+				}
+			}.runTaskLater(Hunt.plugin, 2);
+
+			// Call interactions hook
+			hp.getInteractions().onJoin(hp);
+		}
+
+		@EventHandler
+		public static void onQuit(final HPlayerQuitEvent ev)
+		{
+			final HuntPlayer hp = ev.getPlayer();
+
+			Bukkit.broadcastMessage(MessageFormat.format("§8[§c-§8] §7{0}", hp.getName()));
+			StatSaves.save(hp);
+
+			// Unset kit/team so that players are removed from list
+			if (!Game.hasStarted())
+			{
+				hp.setKit(null);
+				hp.setTeam(null);
+			}
+		}
+
+		/**
+		 * Send message to other team members
+		 * @param hp Player sending message
+		 * @param msg Message sent by player
+		 */
+		public static void teamMessage(final HuntPlayer hp, final String msg)
+		{
+			String formatted = Messager.getColored(MessageFormat.format("{0}#{1} &7&o{2}", hp.getTeam().getColor().color, hp.getName(), msg));
+			// Need to loop all players because team's playerlist may not have been populated yet
+			HuntPlayer.forEach(other -> {
+				if (other.getTeam() == hp.getTeam())
+					other.getPlayer().sendMessage(formatted);
+			});
+		}
+
+		@EventHandler
+		public static void onChat(AsyncPlayerChatEvent ev)
+		{
+			HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
+			String prefix, suffix;
+			if (Game.isTeamMode() && hp.getTeam() != null && ev.getMessage().length() >= 1 && ev.getMessage().charAt(0) == '.')
+			{
+				teamMessage(hp, ev.getMessage().substring(1));
+				ev.setCancelled(true);
+				return;
+			}
+
+			if (Game.hasStarted() && !hp.isAlive()) // Player is dead
+			{
+				prefix = "&7[MORT] ";
+				if (Game.isTeamMode() && hp.getTeam() != null)
+					prefix += MessageFormat.format("{0}'('{1}')' ", hp.getTeam().getColor().color, hp.getTeam().getName());
+				suffix = "&8: &7&o";
+			}
+			else if (Game.hasStarted()) // In game
+			{
+				suffix = ": &7";
+				if (Game.isTeamMode())
+				{
+					prefix = MessageFormat.format("{0}'('{1}')' ", hp.getTeam().getColor().color, hp.getTeam().getName());
+
+					if (Game.isRoundMode())
+					{
+						switch (hp.getRoundData().getState())
+						{
+							case GHOST:
+								prefix += "&8";
+								suffix = " ☠" + suffix;
+								break;
+							case ZOMBIE:
+								prefix += "&2";
+								suffix = "§2☠" + suffix;
+								break;
+						}
+					}
+				}
+				else
+				{
+					prefix = "";
+					if (Game.isRoundMode())
+					{
+						switch (hp.getRoundData().getState())
+						{
+							case ALIVE:
+								prefix = "&e";
+								break;
+							case GHOST:
+								prefix = "&8";
+								suffix = " ☠" + suffix;
+								break;
+							case ZOMBIE:
+								prefix = "&2";
+								suffix = " §2☠" + suffix;
+								break;
+						}
+					}
+					else
+						prefix = "&e";
+				}
+			}
+			else // Waiting for game to start
+			{
+				if (Game.isTeamMode() && hp.getTeam() != null)
+					prefix = MessageFormat.format("{0}'('{1}')' ", hp.getTeam().getColor().color, hp.getTeam().getName());
+				else
+					prefix = "&e";
+				suffix = "&8: &7";
+			}
+
+			ev.setFormat(Messager.getColored(prefix + hp.getName() + suffix + "%2$s"));
+
+			if (hp.getPlayer().isOp())
+				ev.setMessage(Messager.getColored(ev.getMessage()));
+			else
+				ev.setMessage(ev.getMessage());
+		}
+
+		// Update combat data
+		@EventHandler
+		public void onTakeDamage(final HPlayerDamageEvent ev)
+		{
+			if (ev.getAttacker() == null)
+				return;
+
+			final Combat.Data data = ev.getVictim().getCombatData();
+			data.damagedNow(ev.getAttacker());
+		}
+
+		/**
+		 * Score & messages
+		 * @param ev Event
+		 */
+		@EventHandler(ignoreCancelled = true, priority = EventPriority.LOW)
+		public void onDeath(final HPlayerDeathEvent ev)
+		{
+			// Set death time
+			ev.getVictim().setDeathTime(Game.getTime());
+
+			if (ev.getPlayerKiller() == null) // Natural death
+			{
+				if (!Game.isTeamMode())
+				{
+					Bukkit.broadcastMessage(MessageFormat.format("§8'{§c☠§8}' §b{0}§7 est mort.", ev.getVictim().getName()));
+				}
+				else
+				{
+					Bukkit.broadcastMessage(MessageFormat.format("§8'{§c☠§8}' {0}§7 est mort.", ev.getVictim().getTeamColoredName()));
+				}
+			}
+			else // Killed by player
+			{
+				// Give victim's skull to killer
+				PlayerInteractions.giveItem(ev.getPlayerKiller(), new ItemStack[] { Items.getDeathSkull(ev.getVictim()) }, true, true);
+
+				if (!Game.isRoundMode() || (ev.getPlayerKiller().getRoundData().isAlive() && ev.getVictim().getRoundData().isAlive()))
+				{
+					ev.getPlayerKiller().setScore(ev.getPlayerKiller().getScore() + 3);
+					if (!Game.isTeamMode())
+						ev.getPlayerKiller().getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §7Vous avez tué §b{0}§7, vous gagnez §e3 §7points.", ev.getVictim().getName()));
+					else
+						ev.getPlayerKiller().getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §7Vous avez tué {0}§7, votre équipe gagne §e3 §7points.", ev.getVictim().getTeamColoredName()));
+				}
+
+				// Notify players
+				HuntPlayer.forEach(hp -> {
+					if (hp == ev.getPlayerKiller() || !hp.isOnline())
+						return;
+
+					if (!hp.isAlive() || hp == ev.getVictim())
+					{
+						if (!Game.isTeamMode())
+							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §b{0}§7 a tué §b{1}§7.", ev.getPlayerKiller().getName(), ev.getVictim().getName()));
+						else
+							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7.", ev.getPlayerKiller().getTeamColoredName(), ev.getVictim().getTeamColoredName()));
+
+						return;
+					}
+
+					// Notify team members
+					if (Game.isTeamMode() && !Game.isRoundMode())
+					{
+						if (hp.getTeam() == ev.getPlayerKiller().getTeam())
+							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7, votre équipe gagne §e3 §7point.", ev.getPlayerKiller().getTeamColoredName(), ev.getVictim().getTeamColoredName()));
+						else if (hp.getTeam() != ev.getVictim().getTeam())
+							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' {0}§7 a tué {1}§7, tout les équipes en vie gagnent §e1 §7point.", ev.getPlayerKiller().getTeamColoredName(), ev.getVictim().getTeamColoredName()));
+
+					}
+				});
+
+				// All alive teams earn 1 point
+				if (Game.isTeamMode() && !Game.isRoundMode())
+				{
+					Team.forEach(team -> {
+						if (team.isAlive() &&
+							team != ev.getPlayerKiller().getTeam() &&
+							team != ev.getVictim().getTeam())
+							team.setScore(team.getScore()+1);
+					});
+				}
+				else if (!Game.isRoundMode() && !Game.isTeamMode()) // All alive players earn 1 point
+				{
+					HuntPlayer.forEach(hp -> {
+						if (hp == ev.getPlayerKiller())
+							return;
+						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§c🗡§8}' §b{0}§7 a tué §b{1}§7, tout les joueurs en vie gagnent §e1 §7point.", ev.getPlayerKiller().getName(), ev.getVictim().getName()));
+						hp.setScore(hp.getScore()+1);
+					});
+				}
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST)
+		public void onKilledWrong(final HPlayerKilledWrongEvent ev)
+		{
+			ev.getAttacker().spreadRandom();
+			ev.getAttacker().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.CONFUSION, 60, 0));
+			ev.getAttacker().getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
+
+			ev.getVictim().getPlayer().setHealth(ev.getVictim().getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+			ev.getVictim().getPlayer().setFireTicks(0);
+
+			if (!Game.isTeamMode())
+			{
+				ev.getVictim().getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de vous tuer, §b{0} §7a perdu §e2 §7points.", ev.getAttacker().getName()));
+				ev.getAttacker().getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer §b{0}§7, vous avez perdu §e2 §7points.", ev.getVictim().getName()));
+			}
+			else
+			{
+				ev.getVictim().getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de vous tuer, {0} §7a fait perdre §e2 §7points à son équipe.", ev.getAttacker().getTeamColoredName()));
+				ev.getAttacker().getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer {0}§7, votre équipe a perdu §e2 §7points.", ev.getVictim().getTeamColoredName()));
+				ev.getAttacker().getTeam().forAllPlayers(hp -> {
+					if (hp == ev.getAttacker())
+						return;
+					hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7En essayant de tuer {0}§7, {1}§7 a fait perdre §e2 §7points à votre équipe.", ev.getVictim().getTeamColoredName(), ev.getAttacker().getTeamColoredName()));
+				});
+			}
+			ev.getAttacker().getPlayer().playSound(ev.getAttacker().getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 65536.f, 1.f);
+			ev.getVictim().getPlayer().playSound(ev.getVictim().getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 65536.f, 1.f);
+
+			ev.getAttacker().setScore(ev.getAttacker().getScore() - 2);
+		}
 	}
 }

@@ -12,13 +12,16 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.ef3d0c3e.hunt.Hunt;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.ef3d0c3e.hunt.events.HPlayerDeathEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-import packets.MetadataHelper;
+
+import java.util.Iterator;
+import java.util.Map;
+
+import static org.bukkit.event.EventPriority.LOWEST;
 
 /**
  * Lanczos's kit
@@ -32,7 +35,7 @@ public class KitLanczos extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.CLOCK, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.CLOCK, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ A un ange gardient qui le",
 			Kit.itemLoreColor + " sauve avant de mourir"
 		);
@@ -51,36 +54,14 @@ public class KitLanczos extends Kit
 		return desc;
 	}
 
-	/**
-	 * Hooks to be called before a player dies
-	 * @param hp Player
-	 * @return true If player must not die, false otherwise
-	 */
-	public static boolean KitLanczosPreDeathHook(final HuntPlayer hp)
+	@Override
+	public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
 	{
-		if (hp.getKit() == null || !(hp.getKit() instanceof KitLanczos))
-			return false;
-		final KitLanczos kit = (KitLanczos)hp.getKit();
-		if (kit.save == null)
-			return false;
-		if (Game.getTime() - kit.lastUse < 60)
-		{
-			hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent("§cVotre Ange Gardien n'avait pas récupéré!"));
-			return false;
-		}
-
-		hp.getPlayer().getWorld().spawnParticle(Particle.REVERSE_PORTAL, hp.getPlayer().getLocation(), 80, 0.5, 0.5, 0.5);
-		hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ITEM_TOTEM_USE, 16.f, 1.f);
-		hp.getPlayer().teleport(kit.save);
-		hp.getPlayer().setFireTicks(0);
-		hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 5, 3));
-		hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 5, 10));
-		hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 80, 0));
-		hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 3));
-		hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 16.f, 1.f);
-		kit.lastUse = Game.getTime();
-
-		return true;
+		if (indicator != null)
+			indicator.remove();
+		indicator = null;
+		save = null;
+		lastUse = -60;
 	}
 
 	public KitLanczos() {}
@@ -91,18 +72,36 @@ public class KitLanczos extends Kit
 
 	public static class Events implements Listener
 	{
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
+		/**
+		 * Hooks to be called before a player dies
+		 */
+		@EventHandler(ignoreCancelled = true, priority = LOWEST)
+		public void onDeath(final HPlayerDeathEvent ev)
 		{
-			if (ev.getVictim().getKit() == null || !(ev.getVictim().getKit() instanceof KitLanczos))
+			final HuntPlayer hp = ev.getVictim();
+			if (hp.getKit() == null || !(hp.getKit() instanceof KitLanczos))
 				return;
+			final KitLanczos kit = (KitLanczos)hp.getKit();
+			if (kit.save == null)
+				return;
+			if (Game.getTime() - kit.lastUse < 60)
+			{
+				hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent("§cVotre Ange Gardien n'avait pas récupéré!"));
+				return;
+			}
 
-			final KitLanczos kit = (KitLanczos)ev.getVictim().getKit();
-			if (kit.indicator != null)
-				kit.indicator.remove();
-			kit.indicator = null;
-			kit.save = null;
-			kit.lastUse = -60;
+			hp.getPlayer().getWorld().spawnParticle(Particle.REVERSE_PORTAL, hp.getPlayer().getLocation(), 80, 0.5, 0.5, 0.5);
+			hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ITEM_TOTEM_USE, 16.f, 1.f);
+			hp.getPlayer().teleport(kit.save);
+			hp.getPlayer().setFireTicks(0);
+			hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 5, 3));
+			hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 5, 10));
+			hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 80, 0));
+			hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 3));
+			hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.MASTER, 16.f, 1.f);
+			kit.lastUse = Game.getTime();
+
+			ev.setCancelled(true);
 		}
 
 		/**
@@ -116,24 +115,23 @@ public class KitLanczos extends Kit
 				@Override
 				public void run()
 				{
-					for (HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitLanczos))
-							continue;
+							return;
 						final KitLanczos kit = (KitLanczos)hp.getKit();
 
 
 						if (hp.getPlayer().getLocation().subtract(0.0, 1.0, 0.0).getBlock().getType() == Material.AIR ||
 							hp.getPlayer().getLocation().subtract(0.0, 1.0, 0.0).getBlock().getType() == Material.LAVA)
-							continue;
+							return;
 
 						kit.save = hp.getPlayer().getLocation();
 						if (kit.indicator == null || kit.indicator.isDead()) // Spawn
 						{
 							kit.indicator = (ArmorStand)kit.save.getWorld().spawnEntity(kit.save, EntityType.ARMOR_STAND);
-							kit.indicator.getEquipment().setHelmet(HuntItems.getSkull(hp));
+							kit.indicator.getEquipment().setHelmet(Items.getSkull(hp));
 							kit.indicator.setMarker(true);
 							kit.indicator.setInvisible(true);
 							kit.indicator.setSilent(true);
@@ -143,9 +141,9 @@ public class KitLanczos extends Kit
 						}
 
 						kit.indicator.teleport(kit.save);
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 20*16);
+			}.runTaskTimer(Hunt.plugin, 0, 20*16);
 		}
 	}
 }

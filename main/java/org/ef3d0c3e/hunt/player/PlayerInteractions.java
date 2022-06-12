@@ -197,7 +197,7 @@ public class PlayerInteractions
 						performInteractions(hp);
 						this.cancel();
 					}
-				}.runTaskTimer(Game.getPlugin(), 1, 1);
+				}.runTaskTimer(Hunt.plugin, 1, 1);
 			else
 				performInteractions(hp);
 		}

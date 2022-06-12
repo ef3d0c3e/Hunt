@@ -1,9 +1,8 @@
-package packets;
+package org.ef3d0c3e.hunt.packets;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import org.bukkit.inventory.ItemStack;
 import org.ef3d0c3e.hunt.game.Game;
 
 public class MetadataHelper

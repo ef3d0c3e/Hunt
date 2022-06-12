@@ -5,11 +5,9 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.IronGolem;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockDamageEvent;
@@ -26,10 +24,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
 
@@ -49,7 +47,7 @@ public class KitJulien extends Kit
     @Override
     public ItemStack getDisplayItem()
     {
-        return HuntItems.createGuiItem(Material.COBBLESTONE, 0, Kit.itemColor + getDisplayName(),
+        return Items.createGuiItem(Material.COBBLESTONE, 0, Kit.itemColor + getDisplayName(),
                 Kit.itemLoreColor + "╸ Consomme de la cobblestone lorsqu'il",
                 Kit.itemLoreColor + " tape, ce qui augmente ses dégâts",
                 Kit.itemLoreColor + "╸ Ne peux pas avoir mieux que l'Épée en Pierre",
@@ -110,7 +108,7 @@ public class KitJulien extends Kit
                 return;
             if (!Util.containsMaterial(new Material[]{Material.IRON_SWORD, Material.GOLDEN_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD}, ev.getItem().getType()))
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
 
@@ -126,7 +124,7 @@ public class KitJulien extends Kit
                 return;
             if (((Player) ev.getDamager()).getInventory().getItemInMainHand() == null)
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getDamager().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getDamager());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
 
@@ -166,7 +164,7 @@ public class KitJulien extends Kit
         {
             if (!(ev.getEntity() instanceof Player))
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
             if (!Util.containsMaterial(new Material[]{Material.IRON_SWORD, Material.GOLDEN_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD}, ev.getItem().getItemStack().getType()))
@@ -183,7 +181,7 @@ public class KitJulien extends Kit
         {
             if (!(ev.getTarget() instanceof Player) || !(ev.getEntity() instanceof IronGolem))
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getTarget().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getTarget());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
             ev.setCancelled(true);
@@ -198,7 +196,7 @@ public class KitJulien extends Kit
         {
             if (ev.getBlock().getType() != Material.STONE && ev.getBlock().getType() != Material.COBBLESTONE)
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
             if (hp.getPlayer().getInventory().getItemInMainHand() == null)
@@ -215,7 +213,7 @@ public class KitJulien extends Kit
         @EventHandler
         public void onPlayerDropItem(PlayerDropItemEvent ev)
         {
-            final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitJulien))
                 return;
             if (!hp.getPlayer().isSneaking() || hp.getPlayer().getLocation().getY() < hp.getPlayer().getWorld().getMinHeight() + 7)
@@ -252,7 +250,7 @@ public class KitJulien extends Kit
                     } else
                         ev.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent("§7Vous n'avez pas assez de cobblestone sur vous!"));
                 }
-            }.runTaskLater(Game.getPlugin(), 1);
+            }.runTaskLater(Hunt.plugin, 1);
         }
 
         /**
@@ -264,11 +262,11 @@ public class KitJulien extends Kit
         {
             if (!(ev.getRightClicked() instanceof Player))
                 return;
-            final HuntPlayer clicker = Game.getPlayer(ev.getPlayer().getName());
+            final HuntPlayer clicker = HuntPlayer.getPlayer(ev.getPlayer());
             ItemStack item = clicker.getPlayer().getInventory().getItem(ev.getHand());
             if (item.getType() != Material.BUCKET)
                 return;
-            final HuntPlayer clicked = Game.getPlayer(ev.getRightClicked().getName());
+            final HuntPlayer clicked = HuntPlayer.getPlayer((Player)ev.getRightClicked());
             if (clicked.getKit() == null || (clicked.getKit() instanceof KitJulien))
                 return;
 
@@ -292,7 +290,7 @@ public class KitJulien extends Kit
             if (!ev.getItem().isSimilar(KitJulien.milkItem))
                 return;
 
-            final HuntPlayer hp  = Game.getPlayer(ev.getPlayer().getName());
+            final HuntPlayer hp  = HuntPlayer.getPlayer(ev.getPlayer());
 
             ev.setCancelled(true);
             final ItemStack bucket = new ItemStack(Material.BUCKET);

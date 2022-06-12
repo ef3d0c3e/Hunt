@@ -14,6 +14,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -28,25 +29,25 @@ public class IslandEvents implements Listener
 			return;
 		ev.setCancelled(true);
 
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 	}
 
 	@EventHandler
 	public void onLeave(PlayerQuitEvent ev)
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 		if (!hp.isAlive())
 			return;
-		hp.getIsland().reset();
+		hp.getIslandData().reset();
 	}
 
 	@EventHandler
 	public void onWorldChange(PlayerChangedWorldEvent ev)
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 		if (!hp.isAlive())
 			return;
-		hp.getIsland().reset();
+		hp.getIslandData().reset();
 	}
 
 	// Prevent right clicking on slime
@@ -73,8 +74,8 @@ public class IslandEvents implements Listener
 			return;
 		ev.setCancelled(true);
 
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-		hp.getIsland().reset();
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
+		hp.getIslandData().reset();
 
 		ArmorStand hook = (ArmorStand)hp.getPlayer().getWorld().spawnEntity(hp.getPlayer().getLocation().add(hp.getPlayer().getLocation().getDirection().normalize().multiply(2)), EntityType.ARMOR_STAND);
 		hook.setInvulnerable(true);
@@ -118,10 +119,10 @@ public class IslandEvents implements Listener
 		arrow.setVelocity(dir);
 		slime.setVelocity(dir);
 
-		hp.getIsland().hook = hook;
-		hp.getIsland().arrow = arrow;
-		hp.getIsland().slime = slime;
-		hp.getIsland().reel = new BukkitRunnable()
+		hp.getIslandData().hook = hook;
+		hp.getIslandData().arrow = arrow;
+		hp.getIslandData().slime = slime;
+		hp.getIslandData().reel = new BukkitRunnable()
 		{
 			Location lastPos;
 			int ticks = 0;
@@ -150,13 +151,13 @@ public class IslandEvents implements Listener
 
 					this.cancel();
 					// Apply physics to player
-					hp.getIsland().reelBack = new BukkitRunnable()
+					hp.getIslandData().reelBack = new BukkitRunnable()
 					{
 						@Override
 						public void run()
 						{
 							if (Game.isPaused())
-								hp.getIsland().reset();
+								hp.getIslandData().reset();
 
 							final double dsq = hp.getPlayer().getLocation().distanceSquared(hook.getLocation());
 							Vector dir = hook.getLocation().subtract(hp.getPlayer().getLocation()).toVector().normalize();
@@ -171,7 +172,7 @@ public class IslandEvents implements Listener
 							hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ENTITY_CHICKEN_STEP, 0.7f, 1.f);
 						}
 					};
-					hp.getIsland().reelBack.runTaskTimer(Game.getPlugin(), 0, 1);
+					hp.getIslandData().reelBack.runTaskTimer(Hunt.plugin, 0, 1);
 					return;
 				}
 
@@ -188,7 +189,7 @@ public class IslandEvents implements Listener
 				++ticks;
 			}
 		};
-		hp.getIsland().reel.runTaskTimer(Game.getPlugin(), 1, 1);
+		hp.getIslandData().reel.runTaskTimer(Hunt.plugin, 1, 1);
 	}
 
 	// No fall damage when reeling (and reduced otherwise)
@@ -199,9 +200,9 @@ public class IslandEvents implements Listener
 			return;
 		if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
 			return;
-		final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
 		ev.setCancelled(true);
-		if (hp.getIsland().reelBack == null || hp.getIsland().reelBack.isCancelled())
+		if (hp.getIslandData().reelBack == null || hp.getIslandData().reelBack.isCancelled())
 			ev.setCancelled(true);
 		else
 		{
@@ -238,10 +239,10 @@ public class IslandEvents implements Listener
 			return;
 		if (!Util.isSimilarBasic(ev.getItem(), Island.getGrapple()))
 			return;
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 
 		ev.setCancelled(true);
-		IslandData d = hp.getIsland();
+		IslandData d = hp.getIslandData();
 
 		if (d.reelBack == null || d.reelBack.isCancelled())
 			return;

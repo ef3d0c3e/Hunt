@@ -137,17 +137,16 @@ public class Fast
 				if (Game.inHunt())
 					this.cancel();
 
-				for (HuntPlayer hp : Game.getPlayerList().values())
-				{
+				HuntPlayer.forEach(hp -> {
 					if (!hp.isOnline())
-						continue;
+						return;
 
 					hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 0));
 					hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 200, 1));
 					hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 200, 0));
-				}
+				});
 			}
-		}.runTaskTimer(Game.getPlugin(), 20, 100);
+		}.runTaskTimer(Hunt.plugin, 20, 100);
 	}
 
 	/**

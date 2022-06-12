@@ -1,6 +1,9 @@
 package org.ef3d0c3e.hunt;
 
 
+import com.google.common.util.concurrent.AtomicDouble;
+import lombok.Getter;
+import lombok.Setter;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
@@ -11,6 +14,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -26,11 +30,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
+import org.ef3d0c3e.hunt.events.HPlayerDeathEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
-import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.kits.Kit;
 import org.ef3d0c3e.hunt.kits.KitMenu;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -39,16 +42,25 @@ import org.ef3d0c3e.hunt.teams.Team;
 
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class Round
 {
-	static private int m_roundNum = 5; // Total number of rounds
-	static private int m_currentRound = 0; // Round number
-	static private int m_lastDamaged = 0; // Time a player was damaged for the last time (by another player)
-	static private int m_prolongations = 0; // Round prolongation (seconds)
-	static private int m_aliveNum = 0; // Number of ALIVE (state) players
+	@Getter @Setter
+	static private int roundNum = 5; // Total number of rounds
+	@Getter @Setter
+	static private int currentRound = 0; // Round number
+	@Getter
+	static private int lastDamaged = 0; // Time a player was damaged for the last time (by another player)
+	@Getter @Setter
+	static private int prolongations = 0; // Round prolongation (seconds)
+	@Getter @Setter
+	static private int aliveNum = 0; // Number of ALIVE (state) players
 
-	static private int m_roundBegin = 0; // When round began (seconds)
+	@Getter @Setter
+	static private int roundBegin = 0; // When round began (seconds)
 
 	static private String m_deathMenuName = "§2Choisissez";
 	static private Inventory getDeathMenu()
@@ -177,7 +189,7 @@ public class Round
 			!item.isSimilar(m_zombieBoots) &&
 			!item.isSimilar(m_zombieSword) &&
 			!item.isSimilar(m_zombiePickaxe) &&
-			!item.isSimilar(HuntItems.getZombieTracker());
+			!item.isSimilar(Items.getZombieTracker());
 	}
 
 	public enum RoundState
@@ -192,14 +204,17 @@ public class Round
 	 */
 	public static class Data
 	{
-		RoundState m_state;
-		ItemStack[] m_inv; // Store player's inventory on death
-		int m_deathTime; // Time when player died
-		int m_lastUpdatedTracker; // Time when player last updated his tracker
-		boolean m_inMenu; // Whether player is in death menu or not
-		boolean m_stealing; // Whether player is currently stealing or not
-		Location m_freeze; // Freeze location (between rounds)
-		HashMap<Location, Inventory> m_chests; // Stores player's chests
+		private RoundState m_state;
+		private ItemStack[] m_inv; // Store player's inventory on death
+		@Getter @Setter
+		private int deathTime; // Time when player died
+		private int m_lastUpdatedTracker; // Time when player last updated his tracker
+		@Getter @Setter
+		private boolean inMenu; // Whether player is in death menu or not
+		@Getter @Setter
+		private boolean stealing; // Whether player is currently stealing or not
+		private Location m_freeze; // Freeze location (between rounds)
+		private HashMap<Location, Inventory> m_chests; // Stores player's chests
 
 		/**
 		 * Constructor
@@ -208,10 +223,10 @@ public class Round
 		{
 			m_state = RoundState.ALIVE;
 			m_inv = null;
-			m_deathTime = -1;
+			deathTime = -1;
 			m_lastUpdatedTracker = -60;
-			m_inMenu = false;
-			m_stealing = false;
+			inMenu = false;
+			stealing = false;
 			m_freeze = null;
 			m_chests = new HashMap<>();
 		}
@@ -262,15 +277,6 @@ public class Round
 		}
 
 		/**
-		 * Sets player's (first) death time
-		 * @param seconds When the player died first
-		 */
-		public void setDeathTime(final int seconds)
-		{
-			m_deathTime = seconds;
-		}
-
-		/**
 		 * Saves player's inventory
 		 * @param inv Player's inventory
 		 */
@@ -304,42 +310,6 @@ public class Round
 		public void setLastUpdatedTracker(final int seconds)
 		{
 			m_lastUpdatedTracker = seconds;
-		}
-
-		/**
-		 * Gets whether player should be in death menu or not
-		 * @return True if player should be in death menu
-		 */
-		public boolean inMenu()
-		{
-			return m_inMenu;
-		}
-
-		/**
-		 * Sets whether player should be in death menu or not
-		 * @param v True if player should be in death menu
-		 */
-		public void setInMenu(final boolean v)
-		{
-			m_inMenu = v;
-		}
-
-		/**
-		 * Gets whether player is ucrrently stealing or not
-		 * @return true If player is stealing, false otherwise
-		 */
-		public boolean isStealing()
-		{
-			return m_stealing;
-		}
-
-		/**
-		 * Sets whether player is currently stealing or not
-		 * @param stealing Set to true if player is stealing, false otherwise
-		 */
-		public void setStealing(final boolean stealing)
-		{
-			m_stealing = stealing;
 		}
 
 		/**
@@ -383,8 +353,107 @@ public class Round
 
 	}
 
-	public static class RoundEvents implements Listener
+	public static class Events implements Listener
 	{
+		@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+		public void onDeath(final HPlayerDeathEvent ev)
+		{
+			final HuntPlayer hp = ev.getVictim();
+			final HuntPlayer killer = ev.getPlayerKiller();
+
+			hp.setTarget(null);
+			hp.setHunter(null);
+
+			onPlayerDeathRevive();
+			// Death of non alive players cannot end round
+			boolean endRound = getAliveNum() <= 2 && hp.getRoundData().isAlive();
+			if (endRound) // End round
+				roundEnd();
+
+			if (!hp.getRoundData().isZombie() && !hp.getRoundData().isStealing()) // Store inv
+				//NOTE: When stealing, you have to survive until the round ends to keep your stuff
+				hp.getRoundData().saveInventory(hp.getPlayer().getInventory());
+			hp.getRoundData().setStealing(false);
+
+			// Sound
+			if (hp.getRoundData().isAlive() || killer != null)
+				for (Player p : Bukkit.getOnlinePlayers())
+					p.playSound(p.getLocation(), "minecraft:hunt.astronomia", SoundCategory.MASTER, 65536.f, 1.f);
+
+			// Tomb : Chest containing player's inventory (do it before stealPlayer is called)
+			if (hp.getRoundData().isAlive() && (killer == null || killer.getRoundData().isAlive()))
+				Util.spawnTomb(hp.getPlayer().getLocation(), hp);
+
+			boolean update = true;
+			if (!endRound && hp.getRoundData().isAlive() && killer != null && killer.getRoundData().isZombie())
+			{
+				update = false; // No need to call updateTargets()
+				stealPlayer(hp, killer);
+			}
+			else if (Game.isKitMode() && hp.getKit() != null)
+			{
+				hp.getKit().changeOwner(hp, null);
+				hp.setKit(null);
+			}
+
+			// Island hook
+			if (Game.isIslandMode())
+				Island.onDeath(hp);
+
+			if (!endRound)
+			{
+				switch (hp.getRoundData().getState())
+				{
+					case ALIVE:
+						hp.getRoundData().setDeathTime(Game.getTime()); // Save most recent death (as alive)
+
+						if (getCurrentRound() == getRoundNum()) // Must zombie
+							makeZombie(hp, true);
+						else // Player can choose between zombie & ghost
+						{
+							hp.getPlayer().openInventory(getDeathMenu());
+							hp.getRoundData().setInMenu(true);
+							hp.getPlayer().setGameMode(GameMode.SPECTATOR);
+							hp.getRoundData().setState(RoundState.GHOST); // Set to ghost to avoir being targeted by shuffle algorithm etc...
+						}
+
+						break;
+					case ZOMBIE:
+						// Regen for killer
+						if (killer != null && killer.isOnline())
+							killer.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 40, 3, true, true));
+						makeZombie(hp, false);
+						break;
+					case GHOST:
+						makeGhost(hp, false);
+						hp.getPlayer().addPotionEffects(Arrays.asList(
+							new PotionEffect(PotionEffectType.CONFUSION, 180, 0, true, false),
+							new PotionEffect(PotionEffectType.SLOW, 200, 0, true, false),
+							new PotionEffect(PotionEffectType.SLOW_DIGGING, 400, 0, true, false)
+						));
+						break;
+				}
+			}
+			else if (hp.getRoundData().isAlive())
+			{
+				hp.getRoundData().setDeathTime(Game.getBorderRadius());
+			}
+
+			// Heal
+			hp.getPlayer().setHealth(hp.getPlayer().getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+			hp.getPlayer().setFoodLevel(20);
+			hp.getPlayer().setSaturation(20);
+			hp.getPlayer().setFireTicks(0);
+			for (PotionEffect effect : hp.getPlayer().getActivePotionEffects())
+				hp.getPlayer().removePotionEffect(effect.getType());
+
+			// Clear
+			hp.getCombatData().damagedNow(null);
+
+			if (update && !endRound)
+				updateTargets(true);
+		}
+
 		/**
 		 * Prevent player from closing inventory
 		 * @param ev Event
@@ -392,8 +461,8 @@ public class Round
 		@EventHandler
 		public void onInventoryClose(InventoryCloseEvent ev) // Reopen
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-			if (!hp.getRoundData().inMenu() || !ev.getView().getTitle().equals(m_deathMenuName))
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getPlayer());
+			if (!hp.getRoundData().isInMenu() || !ev.getView().getTitle().equals(m_deathMenuName))
 				return;
 
 			new BukkitRunnable()
@@ -404,7 +473,7 @@ public class Round
 					hp.getPlayer().openInventory(getDeathMenu());
 					hp.getPlayer().sendMessage("§7Vous devez choisir une option.");
 				}
-			}.runTaskLater(Game.getPlugin(), 1);
+			}.runTaskLater(Hunt.plugin, 1);
 		}
 
 		/**
@@ -414,8 +483,8 @@ public class Round
 		@EventHandler
 		public void onJoin(PlayerJoinEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
-			if (!hp.getRoundData().inMenu()) // Force reopen menu
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
+			if (!hp.getRoundData().isInMenu()) // Force reopen menu
 				return;
 
 			ev.getPlayer().openInventory(getDeathMenu());
@@ -434,7 +503,7 @@ public class Round
 
 			ev.setCancelled(true);
 
-			HuntPlayer hp = Game.getPlayer(ev.getWhoClicked().getName());
+			HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getWhoClicked());
 			if (ev.getCurrentItem() == null || ev.getInventory() == hp.getPlayer().getInventory()) // Make sure player is not clicking his own inventory
 				return;
 
@@ -478,11 +547,11 @@ public class Round
 		{
 			if (ev.getAction() != Action.RIGHT_CLICK_AIR && ev.getAction() != Action.RIGHT_CLICK_BLOCK)
 				return;
-			if (ev.getItem() == null || !ev.getItem().isSimilar(HuntItems.getZombieTracker()))
+			if (ev.getItem() == null || !ev.getItem().isSimilar(Items.getZombieTracker()))
 				return;
 			ev.setCancelled(true);
 
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.getRoundData().isZombie()) // Destroy item if player is not a zombie
 			{
 				ev.getPlayer().sendMessage("§cVous n'êtes pas un zombie!");
@@ -501,27 +570,27 @@ public class Round
 			}
 
 			// Find closest alive player
-			HuntPlayer closest = null;
-			double dist = 1e100;
-			for (final HuntPlayer o : Game.getPlayerList().values())
+			AtomicReference<HuntPlayer> closest = new AtomicReference<>(null);
+			AtomicDouble dist = new AtomicDouble(Double.MAX_VALUE);
+			HuntPlayer.forEach(o ->
 			{
 				// Note o != hp (always) because o must be alive while hp must be a zombie
 				if (!o.isOnline() || !o.isAlive() || !o.getRoundData().isAlive())
-					continue;
+					return;
 				if (o.getPlayer().getWorld() != hp.getPlayer().getWorld())
-					continue;
+					return;
 				if (Game.isTeamMode() && o.getTeam() == hp.getTeam()) // Prevent targeting members of own team
-					continue;
+					return;
 
 				final double d = o.getPlayer().getLocation().distanceSquared(hp.getPlayer().getLocation());
-				if (d < dist)
+				if (d < dist.get())
 				{
-					dist = d;
-					closest = o;
+					dist.set(d);
+					closest.set(o);
 				}
-			}
+			});
 
-			if (closest == null) // No player found
+			if (closest.get() == null) // No player found
 			{
 				hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR,
 					new TextComponent(
@@ -533,10 +602,10 @@ public class Round
 
 			hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR,
 				new TextComponent(
-					MessageFormat.format("§7Joueur le plus proche: §c{0}m", Math.sqrt(dist))
+					MessageFormat.format("§7Joueur le plus proche: §c{0}m", Math.sqrt(dist.get()))
 				)
 			);
-			hp.getPlayer().setCompassTarget(closest.getPlayer().getLocation());
+			hp.getPlayer().setCompassTarget(closest.get().getPlayer().getLocation());
 			hp.getRoundData().setLastUpdatedTracker(Game.getTime());
 		}
 
@@ -593,7 +662,7 @@ public class Round
 				return;
 			ev.setCancelled(true);
 
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.getRoundData().getChests().containsKey(ev.getClickedBlock().getLocation()))
 			{
 				hp.getPlayer().sendMessage("§cCe coffre n'est pas à vous!");
@@ -605,79 +674,24 @@ public class Round
 	}
 
 	/**
-	 * Gets when a player was damaged for the last time
-	 * @returns When the player that was damaged last was damaged (seconds)
-	 */
-	public static int getLastDamaged()
-	{
-		return m_lastDamaged;
-	}
-
-	/**
 	 * Sets the last time a player was damaged (by another player)
 	 * @param seconds The last time a player was attacked
 	 * @note This may modify prolongations
 	 */
 	public static void setLastDamaged(final int seconds)
 	{
-		m_lastDamaged = seconds;
+		setLastDamaged(seconds);
 		if (getRoundTotalTimeLeft() < 30)
-			m_prolongations += 15;
-	}
-
-	/**
-	 * Gets the number of rounds in the game
-	 * @return The number of rounds in the game
-	 */
-	public static int getRounds()
-	{
-		return m_roundNum;
-	}
-
-	/**
-	 * Sets the number of rounds in the game
-	 * Round duration will be ```(gameTime - huntTime)/roundNum``` (rounded down, with the last round spanning over the entire remaining time)
-	 * @param number The number of rounds
-	 */
-	public static void setRounds(final int number)
-	{
-		m_roundNum = number;
-	}
-
-	/**
-	 * Gets current round number
-	 * @return Current round's number
-	 */
-	public static int getCurrentRound()
-	{
-		return m_currentRound;
-	}
-
-	/**
-	 * Gets prolongation time
-	 * @return Prolongation time (in seconds)
-	 */
-	public static int getTotalProlongations()
-	{
-		return m_prolongations;
+			setProlongations(getProlongations() + 15);
 	}
 
 	/**
 	 * Gets prolongations as minutes and seconds
 	 * @return Prolongations as minutes and seconds
 	 */
-	public static Pair<Integer, Integer> getProlongations()
+	public static Pair<Integer, Integer> getProlongationsDisplay()
 	{
-		return new Pair<>(m_prolongations / 60, m_prolongations % 60);
-	}
-
-	/**
-	 * Sets prolongations
-	 * @param seconds Seconds of prolongations
-	 */
-	public static void setProlongations(int seconds)
-	{
-		m_prolongations = seconds;
+		return new Pair<>(getProlongations() / 60, getProlongations() % 60);
 	}
 
 	/**
@@ -687,7 +701,7 @@ public class Round
 	 */
 	public static int getRoundTime()
 	{
-		return (Game.getGameTime()-Game.getHuntTime())/m_roundNum;
+		return (Game.getGameTime()-Game.getHuntTime())/getRoundNum();
 	}
 
 	/**
@@ -697,7 +711,7 @@ public class Round
 	 */
 	public static int getFinalRoundTime()
 	{
-		return (Game.getGameTime()-Game.getHuntTime()) - getRoundTime()*(m_roundNum-1);
+		return (Game.getGameTime()-Game.getHuntTime()) - getRoundTime()*(getRoundNum()-1);
 	}
 
 	/**
@@ -707,13 +721,13 @@ public class Round
 	public static int getRoundTotalTimeLeft()
 	{
 		int duration;
-		if (m_currentRound == m_roundNum) // Last round
-			duration = Math.min(Game.getGameTime()*60 - m_roundBegin, getFinalRoundTime()*60); // Use min to avoid super short (or even negative times)
+		if (getCurrentRound() == getRoundNum()) // Last round
+			duration = Math.min(Game.getGameTime()*60 - getRoundBegin(), getFinalRoundTime()*60); // Use min to avoid super short (or even negative times)
 		else
 			duration = getRoundTime()*60;
-		duration += m_prolongations;
+		duration += getProlongations();
 
-		return duration - Game.getTime() + m_roundBegin;
+		return duration - Game.getTime() + getRoundBegin();
 	}
 
 	/**
@@ -733,7 +747,7 @@ public class Round
 	 */
 	public static int getRoundTotalElapsedTime()
 	{
-		return Game.getTime() - m_roundBegin;
+		return Game.getTime() - getRoundBegin();
 	}
 
 	/**
@@ -747,44 +761,30 @@ public class Round
 	}
 
 	/**
-	 * Gets the number of players with alive as their state
-	 * @return The number of players with alive as their state
-	 */
-	public static int getNumberAlive()
-	{
-		return m_aliveNum;
-	}
-
-	/**
-	 * Sets the number of alive player (with alive as their state)
-	 * @param alive Number of players with alive as their state
-	 */
-	public static void setNumberAlive(final int alive)
-	{
-		m_aliveNum = alive;
-	}
-
-	/**
 	 * Call whenever a player dies or revive (revive means that the player's stage goes back to alive)
 	 */
 	public static void onPlayerDeathRevive()
 	{
 		//And if the total count of players goes below 2 that means the game has to stop
-		int playerNum = 0;
-		for (final HuntPlayer hp : Game.getPlayerList().values())
+		AtomicInteger playerNum = new AtomicInteger(0);
+		HuntPlayer.forEach(hp -> {
 			if (hp.isAlive())
-				++playerNum;
+				playerNum.addAndGet(1);
+		});
 
-		Game.setPlayerNum(playerNum);
-		m_aliveNum = 0;
-		for (final HuntPlayer hp : Game.getPlayerList().values())
+		Game.setPlayerNum(playerNum.get());
+		AtomicInteger alive = new AtomicInteger(0);
+		HuntPlayer.forEach(hp -> {
 			if (hp.isAlive() && hp.getRoundData().isAlive())
-				++m_aliveNum;
+				alive.addAndGet(1);
+		});
+		setAliveNum(alive.get());
 
 		// Update every player's scoreboard
-		for (HuntPlayer hp : Game.getPlayerList().values())
+		HuntPlayer.forEach(hp -> {
 			if (hp.isOnline())
 				hp.updateScoreboard();
+		});
 	}
 
 	/**
@@ -798,7 +798,7 @@ public class Round
 		hp.setHunter(null);
 
 		onPlayerDeathRevive();
-		boolean endRound = getNumberAlive() < 2;
+		boolean endRound = getAliveNum() < 2;
 		if (endRound) // End round
 			roundEnd();
 
@@ -816,19 +816,17 @@ public class Round
 		if (hp.getRoundData().isAlive() && (killer == null || killer.getRoundData().isAlive()))
 			Util.spawnTomb(hp.getPlayer().getLocation(), hp);
 
-		Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, killer));
-		// Kits hook
-		//if (Game.isKitMode() && hp.getKit() != null)
-			//hp.getKit().onDeath(hp);
-
 		boolean update = true;
 		if (!endRound && hp.getRoundData().isAlive() && killer != null && killer.getRoundData().isZombie())
 		{
 			update = false; // No need to call updateTargets()
 			stealPlayer(hp, killer);
 		}
-		else if (Game.isKitMode())
+		else if (Game.isKitMode() && hp.getKit() != null)
+		{
+			hp.getKit().changeOwner(hp, null);
 			hp.setKit(null);
+		}
 
 		// Island hook
 		if (Game.isIslandMode())
@@ -841,7 +839,7 @@ public class Round
 				case ALIVE:
 					hp.getRoundData().setDeathTime(Game.getTime()); // Save most recent death (as alive)
 
-					if (m_currentRound == m_roundNum) // Must zombie
+					if (getCurrentRound() == getRoundNum()) // Must zombie
 						makeZombie(hp, true);
 					else // Player can choose between zombie & ghost
 					{
@@ -882,18 +880,18 @@ public class Round
 			hp.getPlayer().removePotionEffect(effect.getType());
 
 		// Clear
-		hp.setKiller(null);
+		hp.getCombatData().damagedNow(null);
 
 		if (update && !endRound)
 			updateTargets(true);
 	}
 
 	/**
-	 * Ran when game starts
+	 * Ran when game starts // TODO EV
 	 */
 	public static void start()
 	{
-		m_aliveNum = Game.getPlayerNum();
+		setAliveNum(Game.getPlayerNum());
 	}
 
 	/**
@@ -903,43 +901,40 @@ public class Round
 	{
 		if (Game.getMinutes() == Game.getHuntTime() && Game.getSeconds() == 0) // Hunt just started
 		{
-			++m_currentRound;
-			m_roundBegin = Game.getTime();
+			setCurrentRound(getCurrentRound()+1);
+			setRoundBegin(Game.getTime());
 
 			updateTargets(false);
 
 			if (!Game.isTeamMode())
 			{
-				for (HuntPlayer hp : Game.getPlayerList().values())
-				{
+				HuntPlayer.forEach(hp -> {
 					if (!hp.isOnline())
-						continue;
+						return;
 					hp.getPlayer().sendTitle("§dDébut du premier round!",
 						MessageFormat.format("§9Votre cible est: §b{0}", hp.getTarget().getName()),
 						10, 80, 20
 					);
 					hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du premier round! Votre cible est §b{0}§7, tuez la pour gagner §e3 §7points.", hp.getTarget().getName()));
-				}
+				});
 			}
 			else
 			{
-				for (final Team t : Game.getTeamList().values())
-				{
-					t.forAll((hp) ->
-					{
+				Team.forEach(team -> {
+					team.forAllPlayers((hp) -> {
 						if (!hp.isOnline())
 							return;
 						hp.getPlayer().sendTitle(
 							"§dDébut du premier round!",
-							MessageFormat.format("§9Vous traquez l''équipe: {0}", t.getTarget().getColoredName()),
+							MessageFormat.format("§9Vous traquez l''équipe: {0}", team.getTarget().getColoredName()),
 							10, 80, 20
 						);
-						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du premier round! Vous traquez l''équipe {0}§7, tuez leurs joueurs pour gagner §c3 §7points.", t.getTarget().getColoredName()));
+						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du premier round! Vous traquez l''équipe {0}§7, tuez leurs joueurs pour gagner §c3 §7points.", team.getTarget().getColoredName()));
 					});
-				}
+				});
 			}
 		}
-		else if (m_currentRound != 0 && getRoundTotalTimeLeft() == 0) // Round end
+		else if (getCurrentRound() != 0 && getRoundTotalTimeLeft() == 0) // Round end
 			roundEnd();
 	}
 
@@ -948,10 +943,9 @@ public class Round
 	 */
 	public static void roundEnd()
 	{
-		for (HuntPlayer hp : Game.getPlayerList().values())
-		{
+		HuntPlayer.forEach(hp -> {
 			if (!hp.isAlive())
-				continue;
+				return;
 
 			// Clear effects
 			PlayerInteractions.schedule(hp, (o) ->
@@ -970,27 +964,26 @@ public class Round
 			if (hp.getRoundData().isAlive())
 				hp.setScore(hp.getScore()+1);
 
-			if (!hp.isOnline())
-				continue;
-			hp.getPlayer().sendTitle(
-				MessageFormat.format("§dFin du round {0}!", m_currentRound),
-				"",
-				10, 80, 20
-			);
-			hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Fin du round {0}! Les joueurs en vie gagnent §e1§7 point.", m_currentRound));
+			if (hp.isOnline())
+			{
+				hp.getPlayer().sendTitle(
+					MessageFormat.format("§dFin du round {0}!", getCurrentRound()),
+					"",
+					10, 80, 20
+				);
+				hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Fin du round {0}! Les joueurs en vie gagnent §e1§7 point.", getCurrentRound()));
+			}
 
 			// Kits hook
 			if (Game.isKitMode() && hp.getKit() != null)
 			{
-				//hp.getKit().onDeath(hp);
+				hp.getKit().changeOwner(hp, null);
 				hp.setKit(null);
 			}
 
-			// Island hook
+			// Island hook TODO EV
 			if (Game.isIslandMode())
 				Island.onDeath(hp);
-
-			Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, (LivingEntity) null));
 
 			Game.getOverworld().setGameRule(GameRule.NATURAL_REGENERATION, false);
 			Game.getOverworld().setGameRule(GameRule.DO_MOB_SPAWNING, false);
@@ -1001,8 +994,7 @@ public class Round
 			// Freeze worldborder (should automatically restart after some time)
 			Game.getOverworld().getWorldBorder().setSize(Game.getBorderSize(), 0);
 			Game.getNether().getWorldBorder().setSize(Game.getBorderSize(), 0);
-
-		}
+		});
 
 		Game.pauseTimer();
 		new BukkitRunnable()
@@ -1016,8 +1008,9 @@ public class Round
 			public void run()
 			{
 				// Clears all interactions
-				for (final HuntPlayer hp : Game.getPlayerList().values())
+				HuntPlayer.forEach(hp -> {
 					PlayerInteractions.clearAll(hp);
+				});
 
 				if (ticks == 0)
 				{
@@ -1051,13 +1044,12 @@ public class Round
 					if (Game.isKitMode())
 					{
 						pickOrder = new ArrayList<>(Game.getPlayerNum());
-						for (final HuntPlayer hp : Game.getPlayerList().values())
-						{
+						HuntPlayer.forEach(hp -> {
 							if (!hp.isAlive())
-								continue;
+								return;
 
 							pickOrder.add(hp);
-						}
+						});
 						pickOrder.sort((p1, p2) ->
 						{
 							if (p1.getDeathTime() == p2.getDeathTime())
@@ -1089,11 +1081,11 @@ public class Round
 						}
 						else if (picker.isOnline() &&
 							(picker.getPlayer().getOpenInventory() == null ||
-							!picker.getPlayer().getOpenInventory().getTitle().equals(KitMenu.getMenuName())))
+							!(picker.getPlayer().getOpenInventory().getTopInventory().getHolder() instanceof KitMenu)))
 						{
-							if (picker.getPlayer().getOpenInventory() != null && !picker.getPlayer().getOpenInventory().getTitle().equals(KitMenu.getMenuName()))
+							if (picker.getPlayer().getOpenInventory() != null && !(picker.getPlayer().getOpenInventory().getTopInventory().getHolder() instanceof KitMenu))
 								picker.getPlayer().closeInventory();
-							picker.getPlayer().openInventory(KitMenu.getInventory());
+							picker.getPlayer().openInventory(new KitMenu(picker).getInventory());
 							picker.getPlayer().sendMessage("§7Choisissez un kit!");
 						}
 
@@ -1102,43 +1094,41 @@ public class Round
 
 				if (ticks % 20 == 0)
 				{
-					boolean connected = true;
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					AtomicBoolean connected = new AtomicBoolean(true);
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isAlive())
-							continue;
+							return;
 						if (!hp.isOnline())
 						{
-							connected = false;
-							continue;
+							connected.set(false);
+							return;
 						}
 
 						if (Game.isKitMode() && currentPick != pickOrder.size())
-							connected = false;
+							connected.set(false);
 
 						hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR,
 							new TextComponent("§7En attente de tous les joueurs")
 						);
-					}
+					});
 
 					if (ticks != 0 && ticks % 200 == 0)
 					{
-						if (connected)
+						if (connected.get())
 						{
 							end();
 							return;
 						}
 						else // Send message
 						{
-							String missing = "";
-							for (final HuntPlayer hp : Game.getPlayerList().values())
-							{
+							AtomicReference<String> missing = new AtomicReference<>("");
+							HuntPlayer.forEach(hp -> {
 								if (hp.isAlive() && !hp.isOnline())
-									missing += "§a" + hp.getName() + "§7, ";
-							}
+									missing.getAndUpdate(s -> s += "§a" + hp.getName() + "§7, ");
+							});
 
-							if (!missing.isEmpty())
-								Messager.HuntBroadcast("En attente de: " + missing.subSequence(0, missing.length()-4));
+							if (!missing.get().isEmpty())
+								Messager.HuntBroadcast("En attente de: " + missing.get().subSequence(0, missing.get().length()-4));
 						}
 					}
 				}
@@ -1154,16 +1144,16 @@ public class Round
 				}
 
 				// Freeze players
-				for (final HuntPlayer hp : Game.getPlayerList().values())
-				{
-					if (!hp.isOnline() || hp == picker)
-						continue;
+				HuntPlayer finalPicker = picker;
+				HuntPlayer.forEach(hp -> {
+					if (!hp.isOnline() || hp == finalPicker)
+						return;
 					hp.getPlayer().setVelocity(zero);
 					if (hp.getRoundData().getFreezeLocation() == null)
 						hp.getRoundData().setFreezeLocation(hp.getPlayer().getLocation());
 					else
 						hp.getPlayer().teleport(hp.getRoundData().getFreezeLocation());
-				}
+				});
 
 				++ticks;
 			}
@@ -1178,23 +1168,25 @@ public class Round
 				Game.getOverworld().setGameRule(GameRule.DO_WEATHER_CYCLE, true);
 
 				// Erase freeze location so that next timer it is not set to some garbage (also gc)
-				for (final HuntPlayer hp : Game.getPlayerList().values())
+				HuntPlayer.forEach(hp -> {
 					hp.getRoundData().setFreezeLocation(null);
+				});
 
 				Game.resumeTimer();
 
 				// Begin next round
-				++m_currentRound;
-				m_roundBegin = Game.getTime();
-				m_prolongations = 0;
+				setCurrentRound(getCurrentRound()+1);
+				setRoundBegin(Game.getTime());
+				setProlongations(0);
 
-				if (m_currentRound == m_roundNum+1)
+				if (getCurrentRound() == getRoundNum()+1)
 				{
 					Messager.HuntBroadcast("Fin de la partie");
 					ArrayList<HuntPlayer> sorted = new ArrayList<>();
-					for (final HuntPlayer hp : Game.getPlayerList().values())
+					HuntPlayer.forEach(hp -> {
 						if (hp.isPlaying())
 							sorted.add(hp);
+					});
 					sorted.sort((p1, p2) ->
 					{
 						if (p1.getScore() == p2.getScore())
@@ -1210,10 +1202,9 @@ public class Round
 				}
 
 				// At this point all players are online
-				for (HuntPlayer hp : Game.getPlayerList().values())
-				{
+				HuntPlayer.forEach(hp -> {
 					if (!hp.isAlive())
-						continue;
+						return;
 
 					// Clear some stuff
 					hp.getRoundData().setDeathTime(-1);
@@ -1222,43 +1213,41 @@ public class Round
 					//if (Game.isKitMode())
 					//	hp.getKit().onStart(hp);
 					Bukkit.getPluginManager().callEvent(new HPSpawnEvent(hp, false));
-				}
+				});
 
 
 				updateTargets(false);
 				if (!Game.isTeamMode())
 				{
-					for (HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline())
-							continue;
+							return;
 						hp.getPlayer().sendTitle(
-							MessageFormat.format("§dDébut du round {0}!", m_currentRound),
+							MessageFormat.format("§dDébut du round {0}!", getCurrentRound()),
 							MessageFormat.format("§9Votre cible est: §b{0}", hp.getTarget().getName()),
 							10, 80, 20
 						);
-						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du round {0}! Votre cible est §b{1}§7, tuez la pour gagner §e3 §7points.", m_currentRound, hp.getTarget().getName()));
-					}
+						hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du round {0}! Votre cible est §b{1}§7, tuez la pour gagner §e3 §7points.", getCurrentRound(), hp.getTarget().getName()));
+					});
 				}
 				else
 				{
-					for (final Team t : Game.getTeamList().values())
-					{
-						t.forAll((hp) ->
+					Team.forEach(team -> {
+						team.forAllPlayers((hp) ->
 						{
 							if (!hp.isOnline())
 								return;
 							hp.getPlayer().sendTitle(
-								MessageFormat.format("§dDébut du round {0}!", m_currentRound),
-								MessageFormat.format("§9Vous traquez l''équipe: {0}", t.getTarget().getColoredName()),
+								MessageFormat.format("§dDébut du round {0}!", getCurrentRound()),
+								MessageFormat.format("§9Vous traquez l''équipe: {0}", team.getTarget().getColoredName()),
 								10, 80, 20
 							);
-							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du round {0}! Vous traquez l''équipe {1}§7, tuez leurs joueurs pour gagner §c3 §7points.", m_currentRound, t.getTarget().getColoredName()));
+							hp.getPlayer().sendMessage(MessageFormat.format("§8'{§d☀§8}' §7Début du round {0}! Vous traquez l''équipe {1}§7, tuez leurs joueurs pour gagner §c3 §7points.", getCurrentRound(), team.getTarget().getColoredName()));
 						});
-					}
+					});
 				}
 			}
-		}.runTaskTimer(Game.getPlugin(), 0, 1);
+		}.runTaskTimer(Hunt.plugin, 0, 1);
 	}
 
 	/**
@@ -1270,22 +1259,21 @@ public class Round
 		{
 			// Fill 'list' with players that have no target or no hunter and should be counted
 			java.util.Vector<HuntPlayer> list = new java.util.Vector<>();
-			for (HuntPlayer hp : Game.getPlayerList().values())
-			{
+			HuntPlayer.forEach(hp -> {
 				if (!hp.isAlive() || !hp.getRoundData().isAlive())
-					continue;
+					return;
 
 				// No target or dead target
 				if (hp.getTarget() == null ||
 					!hp.getTarget().isAlive() ||
 					!hp.getTarget().getRoundData().isAlive())
 					list.add(hp);
-				// No hunter or dead hunter
+					// No hunter or dead hunter
 				else if (hp.getHunter() == null ||
 					!hp.getHunter().isAlive() ||
 					!hp.getHunter().getRoundData().isAlive())
 					list.add(hp);
-			}
+			});
 			if (list.size() == 0)
 				return;
 
@@ -1369,12 +1357,11 @@ public class Round
 			// Also modify winning 'screen' code to display winning teams instead of players
 			// Fill 'list' with teams that have no target or no hunter and should be counted
 			java.util.Vector<Team> list = new java.util.Vector<>();
-			for (Team team : Game.getTeamList().values())
-			{
+			Team.forEach(team -> {
 				if (!team.isAlive())
-					continue;
+					return;
 				if (Game.isRoundMode() && !team.isAliveRound())
-					continue;
+					return;
 
 				// No target or dead target
 				if (team.getTarget() == null ||
@@ -1384,7 +1371,7 @@ public class Round
 				else if (team.getHunter() == null ||
 					!team.getHunter().isAlive())
 					list.add(team);
-			}
+			});
 			if (list.size() == 0)
 				return;
 
@@ -1407,7 +1394,7 @@ public class Round
 					t1.setTarget(t2);
 					t2.setHunter(t1);
 
-					t1.forAll((hp) -> {
+					t1.forAllPlayers((hp) -> {
 						if (!hp.isAlive() || !hp.isOnline())
 							return;
 						hp.getPlayer().playSound(
@@ -1447,7 +1434,7 @@ public class Round
 				t1.setTarget(t0);
 				t0.setHunter(t1);
 
-				t1.forAll((hp) -> {
+				t1.forAllPlayers((hp) -> {
 					if (!hp.isAlive() || !hp.isOnline())
 						return;
 					hp.getPlayer().playSound(
@@ -1541,7 +1528,7 @@ public class Round
 		inv.setLeggings(m_zombieLeggings);
 		inv.setBoots(m_zombieBoots);
 
-		inv.addItem(m_zombieSword, m_zombiePickaxe, new ItemStack(Material.CARROT, 24), HuntItems.getZombieTracker());
+		inv.addItem(m_zombieSword, m_zombiePickaxe, new ItemStack(Material.CARROT, 24), Items.getZombieTracker());
 
 		if (hp.getPlayer().getWorld() != Game.getOverworld()) // In case player is in another dimension
 			hp.getPlayer().teleport(Game.getOverworld().getSpawnLocation());
@@ -1602,7 +1589,7 @@ public class Round
 		if (hp.getRoundData().isStealing()) // Restore inventory & drop current inventory on ground if stealing
 		{
 			hp.getRoundData().setStealing(false);
-			Inventory inv = Bukkit.createInventory(hp.getPlayer().getInventory().getHolder(), 45, MessageFormat.format("§cÉquipement du round {0}", m_currentRound-1));
+			Inventory inv = Bukkit.createInventory(hp.getPlayer().getInventory().getHolder(), 45, MessageFormat.format("§cÉquipement du round {0}", getCurrentRound()-1));
 			inv.setItem(0, hp.getPlayer().getInventory().getItem(EquipmentSlot.FEET));
 			inv.setItem(1, hp.getPlayer().getInventory().getItem(EquipmentSlot.LEGS));
 			inv.setItem(2, hp.getPlayer().getInventory().getItem(EquipmentSlot.CHEST));

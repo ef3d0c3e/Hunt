@@ -2,7 +2,6 @@ package org.ef3d0c3e.hunt.stats;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -12,7 +11,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.ef3d0c3e.hunt.Trip;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.kits.Kit;
 import org.ef3d0c3e.hunt.kits.KitMenu;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -20,11 +19,11 @@ import org.ef3d0c3e.hunt.player.HuntPlayer;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 
-public class StatsMenu implements Listener
+public class StatsMenu
 {
 	static public abstract class StatsCategory
 	{
-		static final ItemStack RETURN = HuntItems.createGuiItem(Material.BARRIER, 0, "§cRetour");
+		static final ItemStack RETURN = Items.createGuiItem(Material.BARRIER, 0, "§cRetour");
 		protected ItemStack icon;
 		protected ArrayList<Stat> list;
 
@@ -93,7 +92,7 @@ public class StatsMenu implements Listener
 
 		public StatsCategoryHunt()
 		{
-			icon = HuntItems.createGuiItem(
+			icon = Items.createGuiItem(
 				Material.GOLD_BLOCK, 0, "§bHunt",
 				"", "§7Statistiques sur le hunt");
 
@@ -129,12 +128,12 @@ public class StatsMenu implements Listener
 
 		public StatsCategoryKits()
 		{
-			icon = HuntItems.createGuiItem(
+			icon = Items.createGuiItem(
 				Material.CLOCK, 0, "§bKits",
 				"", "§7Statistiques sur les kits");
 
 			list = new ArrayList<>();
-			for (final Kit k : KitMenu.getList())
+			for (final Kit k : KitMenu.getKitList())
 			{
 				ArrayList<Trip<String, String, StatValue>> l = new ArrayList<>();
 				l.add(new Trip<String, String, StatValue>("played", "§7Parties jouées: §e{0}", new StatLong()));
@@ -162,7 +161,7 @@ public class StatsMenu implements Listener
 
 		public StatsCategoryMining()
 		{
-			icon = HuntItems.createGuiItem(
+			icon = Items.createGuiItem(
 				Material.IRON_PICKAXE, 0, "§bMinage",
 				"", "§7Statistiques sur les blocs", "§7que vous avez miné");
 
@@ -243,7 +242,7 @@ public class StatsMenu implements Listener
 			return;
 
 		final String invName = ev.getView().getTitle();
-		final HuntPlayer hp = Game.getPlayer(invName.substring(invName.indexOf('[')+3, invName.indexOf(']')-2));
+		final HuntPlayer hp = HuntPlayer.getPlayer(invName.substring(invName.indexOf('[')+3, invName.indexOf(']')-2));
 
 		switch (ev.getRawSlot())
 		{
@@ -275,7 +274,7 @@ public class StatsMenu implements Listener
 			return;
 
 		final String invName = ev.getView().getTitle();
-		final HuntPlayer hp = Game.getPlayer(invName.substring(invName.indexOf('[')+3, invName.indexOf(']')-2));
+		final HuntPlayer hp = HuntPlayer.getPlayer(invName.substring(invName.indexOf('[')+3, invName.indexOf(']')-2));
 
 		if (ev.getRawSlot() == 4) // Back
 			ev.getWhoClicked().openInventory(getInventory(hp));
@@ -306,11 +305,11 @@ public class StatsMenu implements Listener
 			return;
 		if (ev.getAction() != Action.RIGHT_CLICK_AIR && ev.getAction() != Action.RIGHT_CLICK_BLOCK)
 			return;
-		if (ev.getItem() == null || !ev.getItem().isSimilar(HuntItems.getStatsMenu()))
+		if (ev.getItem() == null || !ev.getItem().isSimilar(Items.getStatsMenu()))
 			return;
 
 		ev.setCancelled(true);
 
-		ev.getPlayer().openInventory(getInventory( Game.getPlayer(ev.getPlayer().getName()) ));
+		ev.getPlayer().openInventory(getInventory( HuntPlayer.getPlayer(ev.getPlayer()) ));
 	}
 }

@@ -1,177 +1,152 @@
 package org.ef3d0c3e.hunt.kits;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.ef3d0c3e.hunt.IGui;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
+import org.ef3d0c3e.hunt.skins.Skin;
+import oshi.util.tuples.Pair;
 
 import java.lang.reflect.InvocationTargetException;
+import java.text.MessageFormat;
+import java.util.HashMap;
 
-public class KitMenu implements Listener
+@AllArgsConstructor
+public class KitMenu implements IGui
 {
-	static Kit m_kitList[];
-	static String m_name = " §l §l §l §l §l §l §l §l §l §l §l §l §l §9§lKits";
-	static Inventory m_inv;
+	@Getter
+	static private Kit[] kitList = new Kit[]{
+		new KitEsteban(),
+		new KitMehdi(),
+		new KitJb(),
+		new KitBaptiste(),
+		new KitLino(),
+		new KitJulien(),
+		new KitKelian(),
+		new KitThomas(),
+		new KitEnzo(),
+		new KitTom(),
+		new KitFlavien(),
+		new KitBk(),
+		new KitLanczos(),
+		//new KitHasagi(),
+	};
 
-	/**
-	 * Gets menu's name
-	 * @return Menu's name
-	 */
-	public static String getMenuName()
+	private static HashMap<Class<? extends Kit>, Boolean> taken;
+	static
 	{
-		return m_name;
+		taken = new HashMap<>();
+		for (final Kit k : kitList)
+			taken.put(k.getClass(), false);
 	}
 
-	/**
-	 * Initializes kit list & kit menu
-	 */
-	public static void init()
+	public static boolean isTaken(final Kit k)
 	{
-		m_kitList = new Kit[]
+		return taken.get(k.getClass());
+	}
+
+	public static void setTaken(final Kit k, final boolean v)
+	{
+		taken.replace(k.getClass(), v);
+	}
+
+	HuntPlayer hp;
+
+	@Override
+	public void onGuiClick(Player p, ClickType click, int slot, ItemStack item)
+	{
+		// p == hp.getPlayer()
+		if (item == null || item.getType() == Material.AIR)
+			return;
+		if (!Game.isKitMode() || Game.hasStarted())
+			return;
+
+		final Kit kit = kitList[slot];
+
+		if (hp.getKit() != null && kit.getClass() == hp.getKit().getClass())
+			return;
+
+		if (Kit.singleKitOnly && isTaken(kit))
 		{
-			new KitEsteban(),
-			new KitMehdi(),
-			new KitJb(),
-			new KitBaptiste(),
-			new KitLino(),
-			new KitJulien(),
-			new KitKelian(),
-			new KitThomas(),
-			new KitEnzo(),
-			new KitTom(),
-			new KitFlavien(),
-			new KitBk(),
-			new KitLanczos(),
-			//new KitHasagi(),
-		};
-
-		m_inv = Bukkit.createInventory(null, 18, m_name);
-		for (int i = 0; i < m_kitList.length; ++i)
-			m_inv.setItem(i, m_kitList[i].getDisplayItem());
-	}
-
-	/**
-	 * Gets list of kits
-	 * @return List of kits
-	 */
-	public static Kit[] getList()
-	{
-		return m_kitList;
-	}
-
-	/**
-	 * Gets kit menu's inventory
-	 * @return Kit menu's inventory
-	 */
-	public static Inventory getInventory()
-	{
-		return m_inv;
-	}
-
-	/**
-	 * Processes player's click in kit menu
-	 * @param ev Event
-	 */
-	@EventHandler
-	public void onInventoryClick(InventoryClickEvent ev)
-	{
-		if (!Game.isKitMode())
+			p.sendMessage("§cCe kit est déjà pris!");
 			return;
-		if (!ev.getView().getTitle().equals(m_name))
-			return;
-		ev.setCancelled(true);
-		if (ev.getCurrentItem() == null || ev.getCurrentItem().getType() == Material.AIR)
-			return;
-
-		if (ev.getCurrentItem().getType() == Material.BARRIER)
-			return;
-
-		if (ev.getRawSlot() >= m_kitList.length)
-			return;
-		final Kit kit = m_kitList[ev.getRawSlot()];
-		HuntPlayer hp = Game.getPlayer(ev.getWhoClicked().getName());
+		}
 
 		Class<? extends Kit> KitClass = kit.getClass();
 
 		try
 		{
 			hp.setKit(KitClass.getDeclaredConstructor().newInstance());
+			Items.ID.KIT.replace(hp, getItem(hp));
 		}
 		catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
 		{
 			e.printStackTrace();
 		}
 		hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 65536.f, 1.4f);
+		hp.getPlayer().openInventory(new KitMenu(hp).getInventory());
 	}
 
-	/**
-	 * Prevents dragging
-	 * @param ev Event
-	 */
-	@EventHandler
-	public void onInventoryDrag(InventoryDragEvent ev)
-	{
-		if (!Game.isKitMode())
-			return;
-		if (!ev.getView().getTitle().equals(m_name))
-			return;
+	@Override
+	public void onGuiClose(Player p) {
 
-		ev.setCancelled(true);
+	}
+	@Override
+	public void onGuiDrag(Player p, InventoryDragEvent ev) {
+
 	}
 
-
-	/**
-	 * Opens menu on right-click with item
-	 * @param ev Event
-	 */
-	@EventHandler
-	public void onRightClick(PlayerInteractEvent ev)
+	@Override
+	public Inventory getInventory()
 	{
-		if (Game.hasStarted() || !Game.isKitMode())
-			return;
-		if (ev.getAction() != Action.RIGHT_CLICK_AIR && ev.getAction() != Action.RIGHT_CLICK_BLOCK)
-			return;
-		if (ev.getItem() == null || !ev.getItem().isSimilar(HuntItems.getKitSelector()))
-			return;
+		final Inventory inv = Bukkit.createInventory(this, (int)Math.ceil(kitList.length / 9.0) * 9,
+			MessageFormat.format("§lKits §8[§b{0}§8]", hp.getKit() == null ? "§oAucun" : hp.getKit().getDisplayName()));
 
-		ev.setCancelled(true);
-
-		ev.getPlayer().openInventory(getInventory());
-	}
-
-	/**
-	 * Sets kit to taken or not
-	 * @param kit The kit
-	 * @param taken Whether the kit is taken or not
-	 * @note If ```Kit.singleKitOnly``` is false, this has no effect
-	 */
-	public static void setTaken(final Kit kit, boolean taken)
-	{
-		if (!Kit.singleKitOnly)
-			return;
-
-		for (ItemStack item : m_inv)
+		for (final Kit kit : kitList)
 		{
-			if (item == null || !item.getItemMeta().getDisplayName().equals(kit.getDisplayItem().getItemMeta().getDisplayName()))
-				continue;
-
-			if (taken)
-				item.setType(Material.BARRIER);
-			else
-				item.setType(kit.getDisplayItem().getType());
-
-			break;
+			final ItemStack item = kit.getDisplayItem();
+			if (hp.getKit() != null && hp.getKit().getClass() == kit.getClass())
+			{
+				final ItemMeta meta = item.getItemMeta();
+				meta.addEnchant(Enchantment.DURABILITY, 1, true);
+				meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+				item.setItemMeta(meta);
+			}
+			inv.addItem(item);
 		}
+
+		return inv;
+	}
+
+	/**
+	 * Gets display item
+	 * @param hp Player
+	 * @return Display item
+	 */
+	public static ItemStack getItem(final HuntPlayer hp)
+	{
+		 return Items.ID.KIT.create(Material.CLOCK,
+			MessageFormat.format("§6Kit §7: §a{0} §7(Click-Droit)", hp.getKit() == null ? "§oAucun" : hp.getKit().getDisplayName()),
+			"§7Utilisez cet objet pour", "§7choisir un kit"
+		);
 	}
 }

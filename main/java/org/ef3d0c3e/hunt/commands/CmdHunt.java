@@ -3,6 +3,7 @@ package org.ef3d0c3e.hunt.commands;
 import java.text.MessageFormat;
 import java.util.Vector;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import net.minecraft.world.entity.PlayerRideable;
 import org.bukkit.Bukkit;
@@ -17,6 +18,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.Location;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Messager;
 import org.ef3d0c3e.hunt.Normal;
 import org.ef3d0c3e.hunt.Round;
@@ -103,7 +105,7 @@ public class CmdHunt
 				return true;
 			}
 			
-			Game.setKit(!Game.isKitMode());
+			Game.setKitMode(!Game.isKitMode());
 			if (Game.isKitMode())
 				Messager.HuntBroadcast("Les kits viennent d'être activé!");
 			else
@@ -111,7 +113,7 @@ public class CmdHunt
 
 			for (Player p : Bukkit.getOnlinePlayers())
 			{
-				HuntPlayer hp = Game.getPlayer(p.getName());
+				HuntPlayer hp = HuntPlayer.getPlayer(p);
 				hp.updateScoreboard();
 				hp.updateTabname();
 				hp.updateNametag();
@@ -125,7 +127,7 @@ public class CmdHunt
 				return true;
 			}
 			
-			Game.setTeam(!Game.isTeamMode());
+			Game.setTeamMode(!Game.isTeamMode());
 			if (Game.isTeamMode())
 				Messager.HuntBroadcast("Les équipes viennent d'être activé!");
 			else
@@ -133,7 +135,7 @@ public class CmdHunt
 
 			for (Player p : Bukkit.getOnlinePlayers())
 			{
-				HuntPlayer hp = Game.getPlayer(p.getName());
+				HuntPlayer hp = HuntPlayer.getPlayer(p);
 				hp.updateScoreboard();
 				hp.updateTabname();
 				hp.updateNametag();
@@ -148,7 +150,7 @@ public class CmdHunt
 				return true;
 			}
 
-			Game.setIsland(!Game.isIslandMode());
+			Game.setIslandMode(!Game.isIslandMode());
 			if (Game.isIslandMode())
 				Messager.HuntBroadcast("Le mode île vient d'être activé!");
 			else
@@ -185,9 +187,9 @@ public class CmdHunt
 				}
 
 				Game.setRoundMode(true);
-				Round.setRounds(rounds);
+				Round.setRoundNum(rounds);
 
-				Messager.HuntBroadcast(MessageFormat.format("Le mode round vient d''être activé, avec §e{0}§7 rounds!", Round.getRounds()));
+				Messager.HuntBroadcast(MessageFormat.format("Le mode round vient d''être activé, avec §e{0}§7 rounds!", Round.getRoundNum()));
 
 				return true;
 			}
@@ -238,28 +240,32 @@ public class CmdHunt
 						// Check if all players have kits
 						if (Game.isKitMode())
 						{
-							for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-							{
-								if (!set.getValue().isOnline() || set.getValue().getKit() != null)
-									continue;
+							AtomicBoolean canceled = new AtomicBoolean(false);
+							HuntPlayer.forEach(hp -> {
+								if (!hp.isOnline() || hp.getKit() != null)
+									return;
 
-								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas de kit.", set.getKey()));
+								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas de kit.", hp.getName()));
 								cancel();
+								canceled.set(true);
+							});
+							if (canceled.get())
 								return;
-							}
 						}
 						// Check if all players have teams
 						if (Game.isTeamMode())
 						{
-							for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-							{
-								if (!set.getValue().isOnline() || set.getValue().getTeam() != null)
-									continue;
+							AtomicBoolean canceled = new AtomicBoolean(false);
+							HuntPlayer.forEach(hp -> {
+								if (!hp.isOnline() || hp.getTeam() != null)
+									return;
 
-								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas d''équipe.", set.getKey()));
+								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas d''équipe.", hp.getName()));
 								cancel();
+								canceled.set(true);
+							});
+							if (canceled.get())
 								return;
-							}
 						}
 					}
 
@@ -303,26 +309,32 @@ public class CmdHunt
 						// Check if all players still have kits
 						if (Game.isKitMode())
 						{
-							for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-							{
-								if (!set.getValue().isOnline() || set.getValue().getKit() != null)
-									continue;
+							AtomicBoolean canceled = new AtomicBoolean(false);
+							HuntPlayer.forEach(hp -> {
+								if (!hp.isOnline() || hp.getKit() != null)
+									return;
 
-								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas de kit.", set.getKey()));
+								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas de kit.", hp.getName()));
+								cancel();
+								canceled.set(true);
+							});
+							if (canceled.get())
 								return;
-							}
 						}
 						if (Game.isTeamMode())
 						{
 							// Check if all players still have teams
-							for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-							{
-								if (!set.getValue().isOnline() || set.getValue().getTeam() != null)
-									continue;
+							AtomicBoolean canceled = new AtomicBoolean(false);
+							HuntPlayer.forEach(hp -> {
+								if (!hp.isOnline() || hp.getTeam() != null)
+									return;
 
-								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas d''équipe.", set.getKey()));
+								Messager.HuntBroadcast(MessageFormat.format("&cImpossible de lancer la partie: ''{0}'' n''a pas de d''équipe.", hp.getName()));
+								cancel();
+								canceled.set(true);
+							});
+							if (canceled.get())
 								return;
-							}
 						}
 
 						for (Player p : Bukkit.getOnlinePlayers())
@@ -360,7 +372,7 @@ public class CmdHunt
 					
 					++i;
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 20);
+			}.runTaskTimer(Hunt.plugin, 0, 20);
 			
 		}
 		else if (option.equalsIgnoreCase("shuffle"))
@@ -379,11 +391,9 @@ public class CmdHunt
 		else if (option.equalsIgnoreCase("list")) // list
 		{
 			Bukkit.broadcastMessage("Name | Alive | Playing | Online");
-			for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-			{
-				HuntPlayer hp = set.getValue();
+			HuntPlayer.forEach(hp -> {
 				Bukkit.broadcastMessage(MessageFormat.format("{0} | {1} | {2} | {3}", hp.getName(), hp.isAlive(), hp.isPlaying(), hp.isOnline()));
-			}
+			});
 		}
 		else if (option.equalsIgnoreCase("revive"))
 		{
@@ -398,7 +408,7 @@ public class CmdHunt
 				return true;
 			}
 			
-			HuntPlayer hp = Game.getPlayer(args[1]);
+			HuntPlayer hp = HuntPlayer.getPlayer(args[1]);
 			if (hp == null)
 			{
 				Messager.ErrorMessage(sender, "Impossible de trouver ce joueur.");
@@ -427,7 +437,7 @@ public class CmdHunt
 				return true;
 			}
 			
-			HuntPlayer hp = Game.getPlayer(args[1]);
+			HuntPlayer hp = HuntPlayer.getPlayer(args[1]);
 			if (hp == null)
 			{
 				Messager.ErrorMessage(sender, "Impossible de trouver ce joueur.");
@@ -471,7 +481,7 @@ public class CmdHunt
 				return true;
 			}
 
-			final HuntPlayer hp = Game.getPlayer(args[1]);
+			final HuntPlayer hp = HuntPlayer.getPlayer(args[1]);
 			if (hp == null)
 			{
 				Messager.ErrorMessage(sender, "Impossible de trouver ce joueur.");
@@ -498,7 +508,7 @@ public class CmdHunt
 			HuntPlayer attacker = null;
 			if (args.length == 4)
 			{
-				attacker = Game.getPlayer(args[3]);
+				attacker = HuntPlayer.getPlayer(args[3]);
 				if (attacker == null)
 				{
 					Messager.ErrorMessage(sender, "Impossible de trouver ce joueur.");

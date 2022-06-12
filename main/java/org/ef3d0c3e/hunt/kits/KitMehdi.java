@@ -7,11 +7,9 @@ import java.util.Arrays;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.minecraft.world.entity.Entity;
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.craftbukkit.v1_18_R2.entity.CraftEntity;
-import org.bukkit.entity.Bee;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,12 +22,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
-import org.ef3d0c3e.hunt.events.HPKilledWrongEvent;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.events.HPlayerKilledWrongEvent;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.kits.entities.MehdiBee;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.game.Game;
@@ -49,7 +46,7 @@ public class KitMehdi extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.HONEYCOMB, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.HONEYCOMB, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Obtient du Miel Fumé en cassant des fleurs",
 			Kit.itemLoreColor + "╸ Fait apparaître des abeilles qui se",
 			Kit.itemLoreColor + " battent pour lui à l'aide du miel"
@@ -89,6 +86,14 @@ public class KitMehdi extends Kit
 	 */
 	public void changeOwner(HuntPlayer prev, HuntPlayer next)
 	{
+		if (next == null)
+		{
+			for (MehdiBee bee : bees)
+				bee.setRemoved(Entity.RemovalReason.DISCARDED);
+			bees.clear();
+			return;
+		}
+
 		target = null;
 		for (MehdiBee bee : bees)
 		{
@@ -131,28 +136,11 @@ public class KitMehdi extends Kit
 	public static class Events implements Listener
 	{
 		/**
-		 * Kills bees
-		 * @param ev Event
-		 */
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			final HuntPlayer hp = ev.getVictim();
-			if (hp.getKit() == null || !(hp.getKit() instanceof KitMehdi))
-				return;
-
-			final KitMehdi kit = (KitMehdi)hp.getKit();
-			for (MehdiBee bee : kit.bees)
-				bee.setRemoved(Entity.RemovalReason.DISCARDED);
-			kit.bees.clear();
-		}
-
-		/**
 		 * Resets bees aggro
 		 * @param ev Event
 		 */
 		@EventHandler
-		public void onKillWrong(final HPKilledWrongEvent ev)
+		public void onKillWrong(final HPlayerKilledWrongEvent ev)
 		{
 			final HuntPlayer hp = ev.getAttacker();
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitMehdi))
@@ -174,7 +162,7 @@ public class KitMehdi extends Kit
 		@EventHandler
 		void onBlockBreak(final BlockBreakEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitMehdi))
 				return;
 			if (!Util.containsMaterial(Util.flowersBlocks, ev.getBlock().getType()))
@@ -199,7 +187,7 @@ public class KitMehdi extends Kit
 				return;
 			if (ev.getItem() == null || !ev.getItem().isSimilar(KitMehdi.honeyItem))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitMehdi))
 				return;
 
@@ -270,7 +258,7 @@ public class KitMehdi extends Kit
 					return;
 				if (ev.getEntity() instanceof Player) // Prevents attacking wrong players
 				{
-					final HuntPlayer target = Game.getPlayer(ev.getEntity().getName());
+					final HuntPlayer target = HuntPlayer.getPlayer((Player)ev.getEntity());
 					if (!hp.canDamage(target))
 						return;
 				}
@@ -293,19 +281,18 @@ public class KitMehdi extends Kit
 				@Override
 				public void run()
 				{
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitMehdi))
-							continue;
+							return;
 
 						final LivingEntity target = ((KitMehdi)hp.getKit()).target;
 
 						boolean v = false;
 						if (target != null && (target instanceof Player))
 						{
-							final HuntPlayer o = Game.getPlayer(target.getName());
+							final HuntPlayer o = HuntPlayer.getPlayer((Player)target);
 							v = !o.isOnline() || !o.isAlive() || o.getPlayer().getGameMode() != GameMode.SURVIVAL;
 						}
 
@@ -316,9 +303,9 @@ public class KitMehdi extends Kit
 							for (MehdiBee bee : ((KitMehdi) hp.getKit()).bees)
 								bee.stopBeingAngry();
 						}
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 60);
+			}.runTaskTimer(Hunt.plugin, 0, 60);
 		}
 	}
 }

@@ -1,6 +1,5 @@
 package org.ef3d0c3e.hunt.kits;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -10,9 +9,8 @@ import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
 /**
@@ -27,7 +25,7 @@ public class KitBk extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.SUGAR, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.SUGAR, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Casse les arbres plus rapidement",
 			Kit.itemLoreColor + "╸ Nourriture auto cuisante",
 			Kit.itemLoreColor + "╸ Les minerais cuisent automatiquement"
@@ -60,7 +58,7 @@ public class KitBk extends Kit
 		{
 			if (ev.getEntity().getKiller() == null || !(ev.getEntity().getKiller() instanceof Player))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getKiller().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity().getKiller());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitBk))
 				return;
 
@@ -103,7 +101,7 @@ public class KitBk extends Kit
 		@EventHandler
 		public void onBlockBreak(BlockBreakEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitBk))
 				return;
 
@@ -132,7 +130,7 @@ public class KitBk extends Kit
 		{
 			if (!Util.containsMaterial(Util.logBlocks, ev.getBlock().getType()))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitBk))
 				return;
 

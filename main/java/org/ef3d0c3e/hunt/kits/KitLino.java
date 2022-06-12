@@ -1,5 +1,6 @@
 package org.ef3d0c3e.hunt.kits;
 
+import com.comphenix.protocol.ProtocolManager;
 import org.bukkit.*;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.LivingEntity;
@@ -13,15 +14,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Lino's kit
@@ -35,7 +32,7 @@ public class KitLino extends Kit
     @Override
     public ItemStack getDisplayItem()
     {
-        return HuntItems.createGuiItem(Material.CROSSBOW, 0, Kit.itemColor + getDisplayName(),
+        return Items.createGuiItem(Material.CROSSBOW, 0, Kit.itemColor + getDisplayName(),
                 Kit.itemLoreColor + "╸ Échange de place avec les",
                 Kit.itemLoreColor + " entitées touchées à l'arbalette",
                 Kit.itemLoreColor + "╸ A une chance qu'un creeper donne",
@@ -55,6 +52,12 @@ public class KitLino extends Kit
         return desc;
     }
 
+    @Override
+    public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
+    {
+        arrows.clear();
+    }
+
     public KitLino()
     {
         arrows = new HashSet<>();
@@ -64,17 +67,6 @@ public class KitLino extends Kit
 
     public static class Events implements Listener
     {
-        @EventHandler
-        public void onDeath(final HPDeathEvent ev)
-        {
-            final HuntPlayer hp = ev.getVictim();
-            if (hp.getKit() == null || !(hp.getKit() instanceof KitLino))
-                return;
-
-            final KitLino kit = (KitLino)hp.getKit();
-            kit.arrows.clear();
-        }
-
         /**
          * Switches shooter and victim's location
          * @param ev Event
@@ -122,7 +114,7 @@ public class KitLino extends Kit
         {
             if (!(ev.getEntity().getShooter() instanceof Player) || ev.getHitEntity() != null) // Only removes if it hit a block
                 return;
-            final HuntPlayer hp = Game.getPlayer(((Player)ev.getEntity().getShooter()).getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitLino))
                 return;
             ((KitLino)hp.getKit()).arrows.remove(ev.getEntity());
@@ -141,7 +133,7 @@ public class KitLino extends Kit
                 return;
             if (!(ev.getProjectile() instanceof Arrow) || !(ev.getEntity() instanceof Player))
                 return;
-            final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+            final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
             if (hp.getKit() == null || !(hp.getKit() instanceof KitLino))
                 return;
 

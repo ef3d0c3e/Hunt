@@ -7,7 +7,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -18,18 +17,14 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.ShapedRecipe;
-import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
 
@@ -46,7 +41,7 @@ public class KitHasagi extends Kit {
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.NETHERITE_SWORD, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.NETHERITE_SWORD, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Place de la Dirt à l'infini",
 			Kit.itemLoreColor + "╸ Récupère de la nourriture en cassant de la terre",
 			Kit.itemLoreColor + "╸ Tire de la Dirt en la droppant",
@@ -129,7 +124,7 @@ public class KitHasagi extends Kit {
 		@EventHandler
 		public void onEnchantItem(EnchantItemEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getEnchanter().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getEnchanter());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitHasagi))
 				return;
 			if (!Util.isSimilarBasic(ev.getItem(), KitHasagi.bladeItem))
@@ -147,7 +142,7 @@ public class KitHasagi extends Kit {
 		{
 			if (!(ev.getDamager() instanceof Player))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getDamager().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getDamager());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitHasagi))
 				return;
 			final KitHasagi kit = (KitHasagi)hp.getKit();
@@ -175,7 +170,7 @@ public class KitHasagi extends Kit {
 				return;
 			if (!Util.isSimilarBasic(KitHasagi.bladeItem, ev.getItem()))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitHasagi))
 				return;
 			ev.setCancelled(true);
@@ -195,7 +190,7 @@ public class KitHasagi extends Kit {
 		@EventHandler
 		public void onPlayerDropItem(PlayerDropItemEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitHasagi))
 				return;
 			if (!Util.isSimilarBasic(ev.getItemDrop().getItemStack(), KitHasagi.bladeItem))
@@ -277,7 +272,7 @@ public class KitHasagi extends Kit {
 					if (ticks == 180)
 						this.cancel();
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 1);
+			}.runTaskTimer(Hunt.plugin, 0, 1);
 		}
 	}
 }

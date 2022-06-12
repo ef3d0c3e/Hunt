@@ -25,9 +25,6 @@ public class CmdAccessoire
 			return true;
 		}
 
-		World ow = Bukkit.getWorld("overworld");
-		((Player)sender).teleport(new Location(ow, 0, 64, 0));
-
 		//Player p = (Player)sender;
 		//ArmorStand ar = (ArmorStand)p.getWorld().spawnEntity(p.getLocation(), EntityType.ARMOR_STAND);
 		//ar.setInvulnerable(true);

@@ -7,50 +7,32 @@ import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedServerPing;
-import de.freesoccerhdx.advancedworldcreatorapi.AdvancedWorldCreatorAPI;
-import de.freesoccerhdx.advancedworldcreatorapi.EnvironmentBuilder;
-import de.freesoccerhdx.advancedworldcreatorapi.GeneratorConfiguration;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.ef3d0c3e.hunt.accessories.AccessoryMenu;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
-import org.ef3d0c3e.hunt.combat.CombatMechanics;
-import org.ef3d0c3e.hunt.commands.CmdCompass;
-import org.ef3d0c3e.hunt.commands.CmdInv;
 import org.ef3d0c3e.hunt.commands.Commands;
 import org.ef3d0c3e.hunt.commands.Completion;
-import org.ef3d0c3e.hunt.game.Events;
+import org.ef3d0c3e.hunt.events.HPlayerJoinEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.generator.HuntGenerator;
-import org.ef3d0c3e.hunt.items.HuntItems;
-import org.ef3d0c3e.hunt.kits.KitMehdi;
-import org.ef3d0c3e.hunt.kits.KitMenu;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-import org.ef3d0c3e.hunt.skins.Skin;
-import org.ef3d0c3e.hunt.skins.SkinMenu;
-import org.ef3d0c3e.hunt.stats.StatSaves;
-import org.ef3d0c3e.hunt.stats.StatsMenu;
-import org.ef3d0c3e.hunt.teams.TeamMenu;
-import de.freesoccerhdx.advancedworldcreatorapi.AdvancedWorldCreator;
 
-import javax.naming.Name;
-import java.net.StandardSocketOptions;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.UUID;
 
-//import net.minecraft.data.worldgen.biome.VanillaBiomes;
-
 public class Hunt extends JavaPlugin
 {
+	static public Plugin plugin;
+
 	@Override
 	public void onEnable()
 	{
-		final Plugin plugin = this;
+		plugin = this;
 		final Server server = getServer();
 		
 		new BukkitRunnable()
@@ -59,24 +41,7 @@ public class Hunt extends JavaPlugin
 			public void run()
 			{
 				ProtocolLibrary l;
-				Game.init(plugin, ProtocolLibrary.getProtocolManager());
-				StatSaves.init();
-				HuntItems.init();
-				Skin.init();
-				KitMenu.init();
-				Round.init();
-				Fast.init();
-
-				// Events
-				server.getPluginManager().registerEvents(new CombatMechanics(), plugin);
-				server.getPluginManager().registerEvents(new Events(), plugin);
-				server.getPluginManager().registerEvents(new SkinMenu(), plugin);
-				server.getPluginManager().registerEvents(new AccessoryMenu.AccessoryMenuEvents(), plugin);
-				server.getPluginManager().registerEvents(new KitMenu(), plugin);
-				server.getPluginManager().registerEvents(new TeamMenu(), plugin);
-				server.getPluginManager().registerEvents(new CmdCompass.CmdCompassEvents(), plugin);
-				server.getPluginManager().registerEvents(new CmdInv.CmdInvEvents(), plugin);
-				server.getPluginManager().registerEvents(new StatsMenu(), plugin);
+				Game.init(ProtocolLibrary.getProtocolManager());
 
 				// Commands
 				Commands cmds = new Commands();
@@ -260,9 +225,8 @@ public class Hunt extends JavaPlugin
 
 				for (Player p : Bukkit.getOnlinePlayers())
 				{
-					HuntPlayer hp = Game.addPlayer(p);
-					hp.onConnect(p);
-					hp.setKit(new KitMehdi());
+					final HuntPlayer hp = HuntPlayer.addPlayer(p);
+					Bukkit.getPluginManager().callEvent(new HPlayerJoinEvent(hp, true));
 				}
 			}
 		}.runTaskLater(plugin, 1);

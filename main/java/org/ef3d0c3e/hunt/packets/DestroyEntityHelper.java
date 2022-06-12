@@ -1,4 +1,4 @@
-package packets;
+package org.ef3d0c3e.hunt.packets;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;

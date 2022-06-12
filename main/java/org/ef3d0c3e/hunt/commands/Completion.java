@@ -64,7 +64,7 @@ public class Completion implements TabCompleter
 		}
 		else if (cmd.getName().equalsIgnoreCase("kitinfo") && args.length == 1)
 		{
-			for (Kit k : KitMenu.getList())
+			for (Kit k : KitMenu.getKitList())
 				l.add(k.getName());
 		}
 		else if (cmd.getName().equalsIgnoreCase("addteam") && args.length == 1)
@@ -74,8 +74,7 @@ public class Completion implements TabCompleter
 		}
 		else if (cmd.getName().equalsIgnoreCase("delteam") && args.length == 1)
 		{
-			for (Team t : Game.getTeamList().values())
-				l.add(t.getName());
+			Team.forEach(team -> l.add(team.getName()));
 		}
 		else if (cmd.getName().equalsIgnoreCase("inv") && args.length == 1)
 		{

@@ -7,7 +7,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Creeper;
-import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,12 +26,11 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
 import java.util.Arrays;
@@ -53,7 +51,7 @@ public class KitFlavien extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.ELYTRA, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.ELYTRA, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ A un double jump",
 			Kit.itemLoreColor + "╸ Peut crafter des élytras",
 			Kit.itemLoreColor + "╸ Les creepers lâchent des fireworks",
@@ -100,7 +98,7 @@ public class KitFlavien extends Kit
 			elytraItem.setItemMeta(meta);
 			elytraItem.addUnsafeEnchantment(Enchantment.DURABILITY, 1);
 
-			NamespacedKey key = new NamespacedKey(Game.getPlugin(), "flavien_elytra");
+			NamespacedKey key = new NamespacedKey(Hunt.plugin, "flavien_elytra");
 			ShapedRecipe recipe = new ShapedRecipe(key, elytraItem);
 			recipe.shape("F F", "FLF", "F F");
 			recipe.setIngredient('F', Material.FEATHER);
@@ -115,6 +113,12 @@ public class KitFlavien extends Kit
 			meta.setDisplayName("§dFusée");
 			fireworkItem.setItemMeta(meta);
 		}
+	}
+
+	@Override
+	public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
+	{
+		prev.getPlayer().setAllowFlight(false);
 	}
 
 	@Override
@@ -140,18 +144,8 @@ public class KitFlavien extends Kit
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
 				return;
 
-			hp.getPlayer().discoverRecipe(new NamespacedKey(Game.getPlugin(), "flavien_elytra"));
+			hp.getPlayer().discoverRecipe(new NamespacedKey(Hunt.plugin, "flavien_elytra"));
 			hp.getPlayer().setAllowFlight(true);
-		}
-
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			final HuntPlayer hp = ev.getVictim();
-			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
-				return;
-
-			hp.getPlayer().setAllowFlight(false);
 		}
 
 		/**
@@ -161,7 +155,7 @@ public class KitFlavien extends Kit
 		@EventHandler
 		public void onFly(PlayerToggleFlightEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
 				return;
 
@@ -181,7 +175,7 @@ public class KitFlavien extends Kit
 
 					hp.getPlayer().setAllowFlight(true);
 				}
-			}.runTaskLater(Game.getPlugin(), 40);
+			}.runTaskLater(Hunt.plugin, 40);
 		}
 
 		/**
@@ -191,7 +185,7 @@ public class KitFlavien extends Kit
 		@EventHandler
 		public void onJoin(final PlayerJoinEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive())
 				return;
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
@@ -213,7 +207,7 @@ public class KitFlavien extends Kit
 				return;
 			if (ev.getItem().getType() != Material.SUGAR)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
 				return;
 
@@ -268,7 +262,7 @@ public class KitFlavien extends Kit
 				return;
 			if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitFlavien))
 				return;
 

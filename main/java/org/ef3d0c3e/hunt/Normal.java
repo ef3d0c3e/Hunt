@@ -1,22 +1,20 @@
 package org.ef3d0c3e.hunt;
 
 import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.Chest;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.*;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.ef3d0c3e.hunt.events.HPWinEvent;
+import org.ef3d0c3e.hunt.events.HPlayerDeathEvent;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.island.Island;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.teams.Team;
 
 import java.text.MessageFormat;
-import java.util.HashMap;
 import java.util.Vector;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Utilities for normal game mode
@@ -29,38 +27,41 @@ public class Normal
 	public static void onPlayerDeathRevive()
 	{
 		// Update player count
-		int playerNum = 0;
-		for (final HuntPlayer hp : Game.getPlayerList().values())
+		AtomicInteger playerNum = new AtomicInteger(0);
+		HuntPlayer.forEach(hp -> {
 			if (hp.isAlive())
-				++playerNum;
-		Game.setPlayerNum(playerNum);
+				playerNum.getAndAdd(1);
+		});
+		Game.setPlayerNum(playerNum.get());
 
 		// Update every player's scoreboard
-		for (HuntPlayer hp : Game.getPlayerList().values())
+		HuntPlayer.forEach(hp -> {
 			if (hp.isOnline())
 				hp.updateScoreboard();
+		});
 
 		if (!Game.isTeamMode() && Game.getPlayerNum() <= 1)
 		{
-			int score = Integer.MIN_VALUE;
-			java.util.Vector<HuntPlayer> winners = new java.util.Vector<>();
-			for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-			{
-				if (!set.getValue().isPlaying()) // Player is not part of the game
-					continue;
-				score = Math.max(score, set.getValue().getScore());
-			}
-			for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-				if (set.getValue().getScore() == score)
-				{
-					if (!set.getValue().isPlaying()) // Player is not part of the game
-						continue;
-					winners.add(set.getValue());
-				}
+			AtomicInteger score = new AtomicInteger(Integer.MIN_VALUE); // Highest score
+			java.util.Vector<HuntPlayer> winners = new java.util.Vector<>(); // List of winners
+
+			// Get winner(s)'s score
+			HuntPlayer.forEach(hp -> {
+				if (!hp.isPlaying())
+					return;
+				score.set(Math.max(score.get(), hp.getScore()));
+			});
+
+			// Get players with winner's score
+			HuntPlayer.forEach(hp -> {
+				if (!hp.isPlaying() || hp.getScore() != score.get())
+					return;
+				winners.add(hp);
+			});
+
+			// Fire win event for winners
 			for (final HuntPlayer hp : winners)
-			{
 				Bukkit.getPluginManager().callEvent(new HPWinEvent(hp));
-			}
 
 			Messager.broadcastColor("<#FF8010>&m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m ");
 			Messager.broadcastColor("&r &r &r &r &r &r &r &r &r &r <#10FFA0>Fin de la partie!");
@@ -82,40 +83,37 @@ public class Normal
 				}
 				Messager.broadcastColor(MessageFormat.format("&r &r &b{0} <#10FFA0>ont gagné!", win));
 			}
-			Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &r &r <#10FFA0>Avec &e{0} <#10FFA0>points.", score));
+			Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &r &r <#10FFA0>Avec &e{0} <#10FFA0>points.", score.get()));
 			Messager.broadcastColor("<#FF8010>&m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m ");
 
 			Game.stop();
 		}
 		else
 		{
-			int aliveTeams = 0;
-			for (final Team team : Game.getTeamList().values())
-			{
+			AtomicInteger aliveTeams = new AtomicInteger(0);
+			Team.forEach(team -> {
 				if (team.isAlive())
-					++aliveTeams;
-			}
+					aliveTeams.incrementAndGet();
+			});
 
-			if (aliveTeams <= 1)
+			if (aliveTeams.get() <= 1)
 			{
-				int score = Integer.MIN_VALUE;
+				AtomicInteger score = new AtomicInteger(Integer.MIN_VALUE);
 				java.util.Vector<String> winners = new java.util.Vector<String>();
-				for (final Team team : Game.getTeamList().values())
-				{
-					score = Math.max(score, team.getScore());
-				}
+				Team.forEach(team -> {
+					score.set(Math.max(score.get(), team.getScore()));
+				});
 
-				for (final Team team : Game.getTeamList().values())
-				{
-					if (team.getScore() != score)
-						continue;
+				Team.forEach(team -> {
+					if (team.getScore() != score.get())
+						return;
 
 					winners.add(team.getColoredName());
-					team.forAll((hp) ->
+					team.forAllPlayers((hp) ->
 					{
 						Bukkit.getPluginManager().callEvent(new HPWinEvent(hp));
 					});
-				}
+				});
 
 				Messager.broadcastColor("<#FF8010>&m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m ");
 				Messager.broadcastColor("&r &r &r &r &r &r &r &r &r &r <#10FFA0>Fin de la partie!");
@@ -137,7 +135,7 @@ public class Normal
 					}
 					Messager.broadcastColor(MessageFormat.format("&r &r {0} <#10FFA0>ont gagné!", win));
 				}
-				Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &r &r <#10FFA0>Avec &e{0} <#10FFA0>points.", score));
+				Messager.broadcastColor(MessageFormat.format("&r &r &r &r &r &r &r &r &r &r &r <#10FFA0>Avec &e{0} <#10FFA0>points.", score.get()));
 				Messager.broadcastColor("<#FF8010>&m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m &m ");
 
 				Game.stop();
@@ -160,7 +158,6 @@ public class Normal
 		if (Game.getPlayerNum() > 1)
 			updateTargets();
 
-		Bukkit.getPluginManager().callEvent(new HPDeathEvent(hp, killer));
 		// Kits hook
 		//if (Game.isKitMode() && hp.getKit() != null)
 		//	hp.getKit().onDeath(hp);
@@ -192,10 +189,9 @@ public class Normal
 		{
 			// Fill 'list' with players that have no target or no hunter and should be counted
 			Vector<HuntPlayer> list = new Vector<>();
-			for (HuntPlayer hp : Game.getPlayerList().values())
-			{
+			HuntPlayer.forEach(hp -> {
 				if (!hp.isAlive())
-					continue;
+					return;
 
 				// No target or dead target
 				if (hp.getTarget() == null ||
@@ -205,7 +201,7 @@ public class Normal
 				else if (hp.getHunter() == null ||
 					!hp.getHunter().isAlive())
 					list.add(hp);
-			}
+			});
 			if (list.size() == 0)
 				return;
 
@@ -281,10 +277,9 @@ public class Normal
 			// Also modify winning 'screen' code to display winning teams instead of players
 			// Fill 'list' with teams that have no target or no hunter and should be counted
 			Vector<Team> list = new Vector<>();
-			for (Team team : Game.getTeamList().values())
-			{
+			Team.forEach(team -> {
 				if (!team.isAlive())
-					continue;
+					return;
 
 				// No target or dead target
 				if (team.getTarget() == null ||
@@ -294,7 +289,7 @@ public class Normal
 				else if (team.getHunter() == null ||
 					!team.getHunter().isAlive())
 					list.add(team);
-			}
+			});
 			if (list.size() == 0)
 				return;
 
@@ -316,7 +311,7 @@ public class Normal
 					t1.setTarget(t2);
 					t2.setHunter(t1);
 
-					t1.forAll((hp) -> {
+					t1.forAllPlayers((hp) -> {
 						if (!hp.isAlive() || !hp.isOnline())
 							return;
 						hp.getPlayer().playSound(
@@ -352,7 +347,7 @@ public class Normal
 				t1.setTarget(t0);
 				t0.setHunter(t1);
 
-				t1.forAll((hp) -> {
+				t1.forAllPlayers((hp) -> {
 					if (!hp.isAlive() || !hp.isOnline())
 						return;
 					hp.getPlayer().playSound(
@@ -401,5 +396,42 @@ public class Normal
 	public static Pair<Integer, Integer> getElapsedTime()
 	{
 		return new Pair<>(getTotalElapsedTime() / 60, getTotalElapsedTime() % 60);
+	}
+
+	public static class Events implements Listener
+	{
+		@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+		public void onDeath(final HPlayerDeathEvent ev)
+		{
+			final HuntPlayer hp = ev.getVictim();
+
+			hp.setAlive(false);
+			hp.getPlayer().setGameMode(GameMode.SPECTATOR);
+			onPlayerDeathRevive();
+
+			if (Game.getPlayerNum() > 1)
+				updateTargets();
+
+			// Kits hook
+			if (Game.isKitMode() && hp.getKit() != null)
+				hp.getKit().changeOwner(hp, null);
+
+			// Island hook
+			if (Game.isIslandMode())
+				Island.onDeath(hp);
+
+			// Sound
+			for (Player p : Bukkit.getOnlinePlayers())
+				p.playSound(p.getLocation(), "minecraft:hunt.astronomia", SoundCategory.MASTER, 65536.f, 1.f);
+
+			// Tomb : Chest containing player's inventory
+			Util.spawnTomb(hp.getPlayer().getLocation(), hp);
+			hp.getPlayer().getInventory().clear();
+
+			if (Game.isTeamMode() && hp.getTeam().isAlive())
+				hp.getPlayer().sendMessage("§7§oVous êtes mort, mais votre équipe peut encore vous ressusciter.");
+			else
+				hp.getPlayer().sendMessage("§7§oVous êtes mort, vous pouvez observer librement la partie.");
+		}
 	}
 }

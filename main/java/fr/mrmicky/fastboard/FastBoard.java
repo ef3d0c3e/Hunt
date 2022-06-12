@@ -69,7 +69,7 @@ public class FastBoard {
     private static final MethodHandle PLAYER_CONNECTION;
     private static final MethodHandle SEND_PACKET;
     private static final MethodHandle PLAYER_GET_HANDLE;
-    // Scoreboard packets
+    // Scoreboard org.ef3d0c3e.hunt.packets
     private static final FastReflection.PacketConstructor PACKET_SB_OBJ;
     private static final FastReflection.PacketConstructor PACKET_SB_DISPLAY_OBJ;
     private static final FastReflection.PacketConstructor PACKET_SB_SCORE;

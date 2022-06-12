@@ -33,7 +33,7 @@ public class CmdInfo
 			text += "\n";
 		}
 		if (Game.isRoundMode())
-			text += MessageFormat.format(" &7&l╸&r &7Rounds: §e{0}×{1}min&r + &e1×{2}min\n", Round.getRounds()-1, Round.getRoundTime(), Round.getFinalRoundTime());
+			text += MessageFormat.format(" &7&l╸&r &7Rounds: §e{0}×{1}min&r + &e1×{2}min\n", Round.getRoundNum()-1, Round.getRoundTime(), Round.getFinalRoundTime());
 		text += MessageFormat.format(" &7&l╸&r &7Border: &e{0}m&r → &e{1}m\n", Game.getMaxBorder(), Game.getMinBorder());
 		text += MessageFormat.format(" &7&l╸&r &7Temps: &e{0}min&r / &e{1}min\n", Game.getGameTime(), Game.getHuntTime());
 		text += "&8╘═════════════════════╛";

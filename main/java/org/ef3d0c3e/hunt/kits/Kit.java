@@ -1,5 +1,8 @@
 package org.ef3d0c3e.hunt.kits;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.bukkit.inventory.ItemStack;
 import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -36,11 +39,10 @@ public abstract class Kit
 	 */
 	abstract public String[][] getDescription();
 
-
 	/**
 	 * Called when kit's ownership has been transferred to another player
 	 * @param prev Previous owner
-	 * @param next New owner
+	 * @param next New owner, if null, considered to be dead
 	 */
 	public void changeOwner(HuntPlayer prev, HuntPlayer next) {}
 

@@ -6,6 +6,7 @@ import org.bukkit.entity.Item;
 import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
@@ -41,18 +42,18 @@ public class Island
 			m_hookModel.setItemMeta(meta);
 		}
 
-		Bukkit.getServer().getPluginManager().registerEvents(new IslandEvents(), Game.getPlugin());
+		Bukkit.getServer().getPluginManager().registerEvents(new IslandEvents(), Hunt.plugin);
 	}
 
 	public static void onStart(HuntPlayer hp)
 	{
-		hp.setIsland(new IslandData());
+		hp.setIslandData(new IslandData());
 		PlayerInteractions.giveItem(hp, new ItemStack[] { m_grapple }, true, false);
 	}
 
 	public static void onDeath(HuntPlayer hp)
 	{
-		hp.getIsland().reset();
+		hp.getIslandData().reset();
 	}
 
 	public static boolean itemFilter(final ItemStack item)

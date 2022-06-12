@@ -3,7 +3,7 @@ package org.ef3d0c3e.hunt.teams;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.ef3d0c3e.hunt.Messager;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 
 public class TeamColor
 {
@@ -15,7 +15,7 @@ public class TeamColor
 	
 	public ItemStack getGuiItem()
 	{
-		return HuntItems.createGuiItem(concrete, 0, Messager.getColored(color + name));
+		return Items.createGuiItem(concrete, 0, Messager.getColored(color + name));
 	}
 	
 	public String getName()

@@ -4,7 +4,6 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Squid;
@@ -23,15 +22,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Pair;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
-import packets.DestroyEntityHelper;
-import packets.LivingEntityHelper;
-import packets.MetadataHelper;
+import org.ef3d0c3e.hunt.packets.DestroyEntityHelper;
+import org.ef3d0c3e.hunt.packets.LivingEntityHelper;
+import org.ef3d0c3e.hunt.packets.MetadataHelper;
 
 import java.util.*;
 
@@ -49,7 +46,7 @@ public class KitKelian extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.HEART_OF_THE_SEA, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.HEART_OF_THE_SEA, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Obtient des buffs quand il pleut",
 			Kit.itemLoreColor + " ou qu'il est dans l'eau",
 			Kit.itemLoreColor + "╸ A une chance d'obtenir un détecteur de diament",
@@ -84,6 +81,26 @@ public class KitKelian extends Kit
 	}
 
 	@Override
+	public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
+	{
+		// Always clear shulkers
+		try
+		{
+			ArrayList<Integer> list = new ArrayList<>(shulkers.size());
+			for (Pair<Integer, UUID> p : shulkers.values())
+				list.add(p.first);
+			ProtocolManager manager = Game.getProtocolManager();
+			manager.sendServerPacket(prev.getPlayer(), new DestroyEntityHelper(list).getPacket());
+
+			shulkers.clear();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Override
 	public ItemStack[] getItems()
 	{
 		return new ItemStack[]
@@ -106,33 +123,6 @@ public class KitKelian extends Kit
 
 	public static class Events implements Listener
 	{
-		/**
-		 * Destroys entity that indicated diamonds' location
-		 * @param ev Event
-		 */
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			if (ev.getVictim().getKit() == null || !(ev.getVictim().getKit() instanceof KitKelian))
-				return;
-
-			final KitKelian kit = (KitKelian)ev.getVictim().getKit();
-			try
-			{
-				ArrayList<Integer> list = new ArrayList<>(kit.shulkers.size());
-				for (Pair<Integer, UUID> p : kit.shulkers.values())
-					list.add(p.first);
-				ProtocolManager manager = Game.getProtocolManager();
-				manager.sendServerPacket(ev.getVictim().getPlayer(), new DestroyEntityHelper(list).getPacket());
-
-				kit.shulkers.clear();
-			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-			}
-		}
-
 		/**
 		 * Squids drop diamond detector on death
 		 * @param ev Event
@@ -170,7 +160,7 @@ public class KitKelian extends Kit
 			metadata.setNoGravity(true);
 			final PacketContainer metadataPacket = metadata.getPacket(entityId, false);
 
-			// Send packets
+			// Send org.ef3d0c3e.hunt.packets
 			try
 			{
 				ProtocolManager manager = Game.getProtocolManager();
@@ -189,7 +179,7 @@ public class KitKelian extends Kit
 		@EventHandler
 		public void onPlayerJoin(final PlayerJoinEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive() || !hp.isPlaying())
 				return;
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitKelian))
@@ -206,7 +196,7 @@ public class KitKelian extends Kit
 		@EventHandler
 		public void onWorldChange(final PlayerChangedWorldEvent ev)
 		{
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive() || !hp.isPlaying())
 				return;
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitKelian))
@@ -227,7 +217,7 @@ public class KitKelian extends Kit
 				return;
 			if (ev.getItem() == null || !ev.getItem().isSimilar(KitKelian.detectorItem))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitKelian))
 				return;
 
@@ -275,7 +265,7 @@ public class KitKelian extends Kit
 				return;
 			if (ev.getClickedBlock().getType() == Material.DIAMOND_ORE || ev.getClickedBlock().getType() == Material.DEEPSLATE_DIAMOND_ORE)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitKelian))
 				return;
 
@@ -317,23 +307,22 @@ public class KitKelian extends Kit
 				@Override
 				public void run()
 				{
-					for (HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitKelian))
-							continue;
+							return;
 						if (hp.getPlayer().getWorld() != Game.getOverworld())
-							continue;
+							return;
 						if (!Game.getOverworld().hasStorm() && hp.getPlayer().getLocation().getBlock().getType() != Material.WATER)
-							continue;
+							return;
 
 						hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 4 + 1, 1));
 						hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 4 + 1, 0));
 						hp.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 20 * 4 + 1, 1));
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 20 * 4);
+			}.runTaskTimer(Hunt.plugin, 0, 20 * 4);
 		}
 	}
 }

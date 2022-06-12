@@ -21,7 +21,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.KnowledgeBookMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
@@ -29,12 +28,12 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
 
@@ -54,7 +53,7 @@ public class KitEsteban extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.DIRT, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.DIRT, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Place de la Dirt à l'infini",
 			Kit.itemLoreColor + "╸ Récupère de la nourriture en cassant de la terre",
 			Kit.itemLoreColor + "╸ Tire de la Dirt en la droppant",
@@ -129,7 +128,7 @@ public class KitEsteban extends Kit
 			tornadoItem.addUnsafeEnchantment(Enchantment.DURABILITY, 1);
 			tornadoItem.setAmount(2);
 
-			NamespacedKey key = new NamespacedKey(Game.getPlugin(), "esteban_tornado");
+			NamespacedKey key = new NamespacedKey(Hunt.plugin, "esteban_tornado");
 			ShapedRecipe recipe = new ShapedRecipe(key, tornadoItem);
 			recipe.shape("DID", "D D", "DID");
 			recipe.setIngredient('D', Material.DIRT);
@@ -151,7 +150,7 @@ public class KitEsteban extends Kit
 			meta.setColor(Color.fromRGB(0xCE537A));
 			potionItem.setItemMeta(meta);
 
-			NamespacedKey key = new NamespacedKey(Game.getPlugin(), "esteban_potion");
+			NamespacedKey key = new NamespacedKey(Hunt.plugin, "esteban_potion");
 			ShapedRecipe recipe = new ShapedRecipe(key, potionItem);
 			recipe.shape("SSS", "SWS", "SSS");
 			recipe.setIngredient('S', Material.SOUL_SAND);
@@ -177,7 +176,7 @@ public class KitEsteban extends Kit
 			meta.setColor(Color.fromRGB(0xCE537A));
 			splashPotionItem.setItemMeta(meta);
 
-			NamespacedKey key = new NamespacedKey(Game.getPlugin(), "esteban_splash_potion");
+			NamespacedKey key = new NamespacedKey(Hunt.plugin, "esteban_splash_potion");
 			ShapelessRecipe recipe = new ShapelessRecipe(key, splashPotionItem);
 			recipe.addIngredient(Material.GUNPOWDER);
 			recipe.addIngredient(new RecipeChoice.ExactChoice(potionItem));
@@ -218,7 +217,7 @@ public class KitEsteban extends Kit
 		@EventHandler
 		public void onCraftItem(CraftItemEvent ev)
 		{
-			HuntPlayer hp = Game.getPlayer(ev.getViewers().get(0).getName());
+			HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getViewers().get(0));
 			if (!hp.isAlive())
 				return;
 			if (hp.getKit() != null && hp.getKit() instanceof KitEsteban)
@@ -238,7 +237,7 @@ public class KitEsteban extends Kit
 		{
 			if (ev.getItemInHand().getType() != Material.DIRT)
 				return;
-			HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive() || hp.getKit() == null || !(hp.getKit() instanceof KitEsteban))
 				return;
 
@@ -249,7 +248,7 @@ public class KitEsteban extends Kit
 					if (hp.isOnline())
 						hp.getPlayer().getInventory().addItem(new ItemStack(Material.DIRT));
 				}
-			}.runTaskLater(Game.getPlugin(), 1);
+			}.runTaskLater(Hunt.plugin, 1);
 		}
 
 		/**
@@ -261,7 +260,7 @@ public class KitEsteban extends Kit
 		{
 			if (ev.getBlock().getType() != Material.DIRT)
 				return;
-			HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (!hp.isAlive() || hp.getKit() == null || !(hp.getKit() instanceof KitEsteban))
 				return;
 
@@ -367,7 +366,7 @@ public class KitEsteban extends Kit
 			if (!ev.getItem().isSimilar(KitEsteban.potionItem))
 				return;
 
-			HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			luckEffect(hp, 0.0);
 		}
 
@@ -386,26 +385,24 @@ public class KitEsteban extends Kit
 				return;
 			if (!(pot.getShooter() instanceof Player)) // Dispensers
 				return;
-			final HuntPlayer thrower = Game.getPlayer(((Player)pot.getShooter()).getName());
+			final HuntPlayer thrower = HuntPlayer.getPlayer(((Player)pot.getShooter()));
 
 			final Location loc = ev.getEntity().getLocation();
 			loc.getWorld().spawnParticle(Particle.GLOW, loc.getX(), loc.getY(), loc.getZ(), 150, 0.8, 0.4, 0.8);
 
-			for (HashMap.Entry<String, HuntPlayer> set : Game.getPlayerList().entrySet())
-			{
-				HuntPlayer hp = set.getValue();
+			HuntPlayer.forEach(hp -> {
 				if (!hp.isAlive() || hp.getPlayer().getWorld() != pot.getWorld())
-					continue;
+					return;
 				if (!thrower.canDamage(hp) && thrower != hp)
-					continue;
+					return;
 				double dist = hp.getPlayer().getLocation().distanceSquared(pot.getLocation());
 				if (dist <= 16.0) // 4.0
 				{
 					luckEffect(hp, Math.sqrt(dist));
 					if (thrower.canDamage(hp) && (hp.getKit() == null || !(hp.getKit() instanceof KitEsteban))) // Register as attacked
-						hp.registerAttack(thrower);
+						hp.getCombatData().damagedNow(thrower);
 				}
-			}
+			});
 		}
 
 		/**
@@ -417,7 +414,7 @@ public class KitEsteban extends Kit
 		{
 			if (ev.getItemDrop().getItemStack().getType() != Material.DIRT)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitEsteban))
 				return;
 
@@ -447,7 +444,7 @@ public class KitEsteban extends Kit
 				return;
 			if (!ev.getItem().isSimilar(KitEsteban.tornadoItem))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitEsteban))
 				return;
 
@@ -619,7 +616,7 @@ public class KitEsteban extends Kit
 
 						if (ent instanceof Player)
 						{
-							HuntPlayer hp = Game.getPlayer(ent.getName());
+							HuntPlayer hp = HuntPlayer.getPlayer((Player)ent);
 							if (!hp.isAlive())
 								continue;
 
@@ -638,7 +635,7 @@ public class KitEsteban extends Kit
 					}
 					++ticks;
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 1);
+			}.runTaskTimer(Hunt.plugin, 0, 1);
 
 			((KitEsteban)hp.getKit()).tornadoCount += 1;
 		}
@@ -661,9 +658,9 @@ public class KitEsteban extends Kit
 				PlayerInteractions.schedule(hp, (o) ->
 				{
 					hp.getPlayer().discoverRecipes(Arrays.asList(
-						new NamespacedKey(Game.getPlugin(), "esteban_tornado"),
-						new NamespacedKey(Game.getPlugin(), "esteban_potion"),
-						new NamespacedKey(Game.getPlugin(), "esteban_splash_potion")
+						new NamespacedKey(Hunt.plugin, "esteban_tornado"),
+						new NamespacedKey(Hunt.plugin, "esteban_potion"),
+						new NamespacedKey(Hunt.plugin, "esteban_splash_potion")
 					));
 				});
 			});

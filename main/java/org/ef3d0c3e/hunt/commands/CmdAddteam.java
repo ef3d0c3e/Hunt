@@ -48,7 +48,7 @@ public class CmdAddteam
 			Messager.ErrorMessage(sender, MessageFormat.format("La couleur ''{0}'' n'existe pas.", colorName));
 			return true;
 		}
-		if (Game.teamColorTaken(color))
+		if (Team.teamColorTaken(color))
 		{
 			Messager.ErrorMessage(sender, MessageFormat.format("Il y a déjà une équipe de couleur ''{0}''.", color.getName()));
 			return true;
@@ -69,7 +69,7 @@ public class CmdAddteam
 			Messager.ErrorMessage(sender, "Vous devez spécifier le nom de l'éqipe.");
 			return true;
 		}
-		if (Game.teamExists(name))
+		if (Team.teamExists(name))
 		{
 			Messager.ErrorMessage(sender, MessageFormat.format("L''équipe ''{0}'' existe déjà!", name));
 			return true;
@@ -80,10 +80,9 @@ public class CmdAddteam
 			return true;
 		}
 
-		Team team = Game.addTeam(color, name);
+		Team team = Team.addTeam(color, name);
 		Messager.broadcast(MessageFormat.format("&8[&9Hunt&8] &7L''équipe {0}&7 vient d''être crée!", team.getColoredName()));
-		TeamMenu.updateInventory();
-		
+
 		return true;
 	}
 }

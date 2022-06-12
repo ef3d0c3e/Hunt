@@ -1,11 +1,10 @@
 package org.ef3d0c3e.hunt.stats;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.ef3d0c3e.hunt.Trip;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
 import java.text.MessageFormat;
@@ -30,7 +29,7 @@ public class Stat
 	{
 		this.namespace = namespace;
 		this.components = components;
-		icon = HuntItems.createGuiItem(material, 0, name, desc);
+		icon = Items.createGuiItem(material, 0, name, desc);
 	}
 
 	/**

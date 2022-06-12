@@ -28,8 +28,8 @@ public class CmdJoin
 			return true;
 		}
 		
-		HuntPlayer hp = Game.getPlayer(sender.getName());
-		((Player)sender).openInventory(TeamMenu.getInventory());
+		HuntPlayer hp = HuntPlayer.getPlayer((Player)sender);
+		((Player)sender).openInventory(new TeamMenu(hp).getInventory());
 		
 		return true;
 	}

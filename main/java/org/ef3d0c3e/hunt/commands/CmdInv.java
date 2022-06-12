@@ -67,7 +67,7 @@ public class CmdInv
 			return true;
 		}
 
-		final HuntPlayer hp = Game.getPlayer(sender.getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)sender);
 		if (hp.isAlive())
 		{
 			Messager.ErrorMessage(sender, "Vous ne pouvez pas faire cette commande tant que vous êtes en vie!");
@@ -86,7 +86,7 @@ public class CmdInv
 			Messager.ErrorMessage(sender, "Vous devez spécifier un joueur!");
 			return true;
 		}
-		final HuntPlayer other = Game.getPlayer(args[0]);
+		final HuntPlayer other = HuntPlayer.getPlayer(args[0]);
 		if (other == null)
 		{
 			Messager.ErrorMessage(sender, "Ce joueur est introuvable!");

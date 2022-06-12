@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.ef3d0c3e.hunt.Messager;
 import org.ef3d0c3e.hunt.game.Game;
 import org.ef3d0c3e.hunt.kits.KitMenu;
+import org.ef3d0c3e.hunt.player.HuntPlayer;
 
 public class CmdKit
 {
@@ -27,7 +28,7 @@ public class CmdKit
 			return true;
 		}
 		
-		((Player)sender).openInventory(KitMenu.getInventory());
+		((Player)sender).openInventory(new KitMenu(HuntPlayer.getPlayer((Player)sender)).getInventory());
 		
 		return true;
 	}

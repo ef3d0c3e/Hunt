@@ -1,16 +1,11 @@
 package org.ef3d0c3e.hunt.events;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 
-/**
- * When a player attempts to kill the wrong target
- */
-@AllArgsConstructor
-public class HPKilledWrongEvent extends Event
+public class HPlayerJoinEvent extends Event
 {
 	private static final HandlerList HANDLERS_LIST = new HandlerList();
 
@@ -18,7 +13,6 @@ public class HPKilledWrongEvent extends Event
 	{
 		return HANDLERS_LIST;
 	}
-
 	@Override
 	public HandlerList getHandlers()
 	{
@@ -26,7 +20,18 @@ public class HPKilledWrongEvent extends Event
 	}
 
 	@Getter
-	private HuntPlayer victim;
+	final HuntPlayer player;
 	@Getter
-	private HuntPlayer attacker;
+	final boolean newPlayer;
+
+	/**
+	 * Constructor
+	 * @param hp Player
+	 * @param newPlayer Whether player is a new player or not (first time joining)
+	 */
+	public HPlayerJoinEvent(final HuntPlayer hp, final boolean newPlayer)
+	{
+		this.player = hp;
+		this.newPlayer = newPlayer;
+	}
 }

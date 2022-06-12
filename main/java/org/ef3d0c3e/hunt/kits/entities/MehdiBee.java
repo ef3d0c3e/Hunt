@@ -228,8 +228,8 @@ public class MehdiBee extends Animal implements NeutralMob, FlyingAnimal
 			// Register owner as attacker
 			if (entity instanceof Player)
 			{
-				final HuntPlayer hp = Game.getPlayer(((Player) entity).getName().getString());
-				hp.registerAttack(owner);
+				final HuntPlayer hp = HuntPlayer.getPlayer(((Player) entity).getName().getString());
+				hp.getCombatData().damagedNow(owner);
 			}
 
 			this.doEnchantDamageEffects(this, entity);

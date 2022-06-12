@@ -42,7 +42,7 @@ public class CmdKitinfo
 			page = 1;
 		
 		boolean found = false;
-		for (Kit k : KitMenu.getList())
+		for (final Kit k : KitMenu.getKitList())
 		{
 			if (!k.getName().equalsIgnoreCase(option))
 				continue;

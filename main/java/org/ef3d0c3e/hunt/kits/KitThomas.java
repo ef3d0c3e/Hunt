@@ -25,13 +25,11 @@ import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
 import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
-import oshi.util.tuples.Pair;
 
 import java.text.MessageFormat;
 import java.util.*;
@@ -52,7 +50,7 @@ public class KitThomas extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.ENDER_EYE, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.ENDER_EYE, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Tire des craies topologiques",
 			Kit.itemLoreColor + "╸ Ses fours lui rapportent des intérêts"
 		);
@@ -122,6 +120,31 @@ public class KitThomas extends Kit
 	}
 
 	@Override
+	public void changeOwner(final HuntPlayer prev, final HuntPlayer next)
+	{
+		if (next == null)
+		{
+			Iterator<Map.Entry<Location, HuntPlayer>> it = furnaces.entrySet().iterator();
+			while (it.hasNext())
+			{
+				final Map.Entry<Location, HuntPlayer> e = it.next();
+				if (e.getValue() == prev)
+					it.remove();
+			}
+			return;
+		}
+
+
+		Iterator<Map.Entry<Location, HuntPlayer>> it = furnaces.entrySet().iterator();
+		while (it.hasNext())
+		{
+			final Map.Entry<Location, HuntPlayer> e = it.next();
+			if (e.getValue() == prev)
+				e.setValue(next);
+		}
+	}
+
+	@Override
 	public ItemStack[] getItems()
 	{
 		return new ItemStack[]
@@ -160,26 +183,6 @@ public class KitThomas extends Kit
 		}
 
 		/**
-		 * Removes furnaces's ownership
-		 * @param ev Event
-		 */
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			final HuntPlayer hp = ev.getVictim();
-			if (hp.getKit() == null || !(hp.getKit() instanceof KitThomas))
-				return;
-
-			Iterator<Map.Entry<Location, HuntPlayer>> it = furnaces.entrySet().iterator();
-			while (it.hasNext())
-			{
-				final Map.Entry<Location, HuntPlayer> e = it.next();
-				if (e.getValue() == hp)
-					it.remove();
-			}
-		}
-
-		/**
 		 * Gives players his items & awards achievements for playing with this kit
 		 * @param ev Event
 		 */
@@ -214,7 +217,7 @@ public class KitThomas extends Kit
 				return;
 			if (ev.getBlockPlaced().getType() != Material.FURNACE)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitThomas))
 				return;
 
@@ -300,7 +303,7 @@ public class KitThomas extends Kit
 				return;
 			if (ev.getItem() == null || !ev.getItem().isSimilar(KitThomas.chalkItem))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitThomas))
 				return;
 
@@ -337,7 +340,7 @@ public class KitThomas extends Kit
 					arrow.getWorld().spawnParticle(Particle.REDSTONE, arrow.getLocation(), 1, 0.0, 0.0, 0.0, new Particle.DustOptions(Color.WHITE, 2));
 					arrow.getWorld().spawnParticle(Particle.REDSTONE, arrow.getLocation().add(0.0, .35, 0.0), 1, 0.0, 0.0, 0.0, new Particle.DustOptions(Color.GREEN, 2));
 				}
-			}.runTaskTimer(Game.getPlugin(), 1, 1);
+			}.runTaskTimer(Hunt.plugin, 1, 1);
 		}
 
 		/**
@@ -351,7 +354,7 @@ public class KitThomas extends Kit
 				return;
 			if (!(ev.getEntity().getShooter() instanceof Player))
 				return;
-			final HuntPlayer owner = Game.getPlayer(((Player)ev.getEntity().getShooter()).getName());
+			final HuntPlayer owner = HuntPlayer.getPlayer((Player)ev.getEntity().getShooter());
 			if (owner.getKit() == null || (owner.getKit() instanceof KitThomas))
 				return;
 			final KitThomas kit = (KitThomas)owner.getKit();
@@ -453,7 +456,7 @@ public class KitThomas extends Kit
 						}
 					}
 				}
-			}.runTaskLater(Game.getPlugin(), 1);
+			}.runTaskLater(Hunt.plugin, 1);
 		}
 
 
@@ -472,16 +475,15 @@ public class KitThomas extends Kit
 					if (Game.isPaused())
 						return;
 
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitThomas))
-							continue;
+							return;
 
 						final KitThomas kit = (KitThomas) hp.getKit();
 						if (isNightMode() == kit.nightMode)
-							continue;
+							return;
 
 						kit.nightMode = isNightMode();
 						if (kit.nightMode)
@@ -494,9 +496,9 @@ public class KitThomas extends Kit
 							hp.getPlayer().sendMessage("§7§oLe jour se lève! Le roi des roublards reprend son rôle...");
 							hp.getPlayer().getInventory().setHelmet(KitThomas.crownItem);
 						}
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 100);
+			}.runTaskTimer(Hunt.plugin, 0, 100);
 
 			// Reload
 			new BukkitRunnable()
@@ -507,23 +509,22 @@ public class KitThomas extends Kit
 					if (!isNightMode() || Game.isPaused())
 						return;
 
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isOnline() || !hp.isAlive())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitThomas))
-							continue;
+							return;
 
 						final KitThomas kit = (KitThomas) hp.getKit();
 						if (kit.ammo == 10)
-							continue;
+							return;
 
 						hp.getPlayer().getWorld().playSound(hp.getPlayer().getLocation(), Sound.ITEM_CROSSBOW_LOADING_END, SoundCategory.MASTER, 6.f, 1.f);
 						++kit.ammo;
 						hp.getPlayer().spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(MessageFormat.format("§e{0}/10", kit.ammo)));
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 15);
+			}.runTaskTimer(Hunt.plugin, 0, 15);
 		}
 	}
 }

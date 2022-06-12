@@ -1,7 +1,6 @@
 package org.ef3d0c3e.hunt.kits;
 
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,12 +18,10 @@ import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
-import org.ef3d0c3e.hunt.events.HPDeathEvent;
 import org.ef3d0c3e.hunt.events.HPSpawnEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
 
@@ -43,7 +40,7 @@ public class KitTom extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.COMPASS, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.COMPASS, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Les battements de son coeur",
 			Kit.itemLoreColor + " indiquent la distance à sa cible",
 			Kit.itemLoreColor + "╸ Peut traquer son chasseur",
@@ -102,27 +99,6 @@ public class KitTom extends Kit
 	public static class Events implements Listener
 	{
 		/**
-		 * Spawns an ocelot when player dies
-		 * @param ev Event
-		 */
-		@EventHandler
-		public void onDeath(final HPDeathEvent ev)
-		{
-			final HuntPlayer hp = ev.getVictim();
-			if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
-				return;
-
-			//TODO: Custom texture ?
-			Ocelot pangolin = (Ocelot)hp.getPlayer().getWorld().spawnEntity(hp.getPlayer().getLocation(), EntityType.OCELOT);
-
-			pangolin.setCustomNameVisible(true);
-			pangolin.setCustomName("§7Pangolin");
-			pangolin.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40.0);
-			pangolin.setHealth(40);
-			pangolin.addPotionEffect(new PotionEffect(PotionEffectType.POISON, 2400, 1));
-		}
-
-		/**
 		 * Gives carpet to player
 		 * @param ev Event
 		 */
@@ -147,7 +123,7 @@ public class KitTom extends Kit
 				return;
 			if (ev.getItem() == null || !ev.getItem().isSimilar(KitTom.magicCarpet))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 				return;
 
@@ -194,7 +170,7 @@ public class KitTom extends Kit
 								if (carpet != null && !carpet.isDead())
 									carpet.remove();
 							}
-						}.runTaskLater(Game.getPlugin(), 30);
+						}.runTaskLater(Hunt.plugin, 30);
 						return;
 					}
 
@@ -227,7 +203,7 @@ public class KitTom extends Kit
 
 					++ticks;
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 1);
+			}.runTaskTimer(Hunt.plugin, 0, 1);
 		}
 
 		/**
@@ -241,7 +217,7 @@ public class KitTom extends Kit
 				return;
 			if (ev.getCause() != EntityDamageEvent.DamageCause.FALL)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getEntity().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getEntity());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 				return;
 
@@ -262,7 +238,7 @@ public class KitTom extends Kit
 		{
 			if (ev.getItemDrop().getItemStack().getType() != Material.COAL_BLOCK)
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 				return;
 
@@ -286,7 +262,7 @@ public class KitTom extends Kit
 					else
 						ev.getItemDrop().remove();
 				}
-			}.runTaskLater(Game.getPlugin(), 40);
+			}.runTaskLater(Hunt.plugin, 40);
 		}
 
 		/**
@@ -300,9 +276,9 @@ public class KitTom extends Kit
 				return;
 			if (ev.getItem() == null)
 				return;
-			if (!ev.getItem().isSimilar(HuntItems.getTracker()))
+			if (!ev.getItem().isSimilar(Items.getTracker()))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
 				return;
 
@@ -346,12 +322,11 @@ public class KitTom extends Kit
 					if (!Game.inHunt())
 						return;
 
-					for (final HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp -> {
 						if (!hp.isAlive() || !hp.isOnline())
-							continue;
+							return;
 						if (hp.getKit() == null || !(hp.getKit() instanceof KitTom))
-							continue;
+							return;
 
 						HuntPlayer hunter = null;
 						if (!Game.isTeamMode())
@@ -359,7 +334,7 @@ public class KitTom extends Kit
 						else
 							hunter = hp.getTeam().getHunter().getClosestPlayer(hp);
 						if (hunter == null || !hunter.isOnline() || hp.getPlayer().getWorld() != hunter.getPlayer().getWorld() || !hunter.isAlive())
-							continue;
+							return;
 
 						final double dist = hunter.getPlayer().getLocation().distanceSquared(hp.getPlayer().getLocation());
 						if (dist < 30.0 * 30.0)
@@ -373,7 +348,7 @@ public class KitTom extends Kit
 								{
 									hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 8.f, .1f);
 								}
-							}.runTaskLater(Game.getPlugin(), 5);
+							}.runTaskLater(Hunt.plugin, 5);
 						} else if (dist < 50.0 * 50.0)
 						{
 							hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 1.f, .1f);
@@ -381,9 +356,9 @@ public class KitTom extends Kit
 						{
 							hp.getPlayer().playSound(hp.getPlayer().getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, SoundCategory.MASTER, 0.5f, .1f);
 						}
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 20);
+			}.runTaskTimer(Hunt.plugin, 0, 20);
 		}
 	}
 }

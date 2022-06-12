@@ -26,7 +26,7 @@ public class CmdCibles
 			return true;
 		}
 
-		final HuntPlayer hp = Game.getPlayer(sender.getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)sender);
 		if (hp.isAlive())
 		{
 			Messager.ErrorMessage(sender, "Vous ne pouvez pas faire cette commande tant que vous êtes en vie!");
@@ -41,23 +41,21 @@ public class CmdCibles
 
 		if (Game.isTeamMode())
 		{
-			for (final Team team : Game.getTeamList().values())
-			{
+			Team.forEach(team -> {
 				if (!team.isAlive() || team.getTarget() == null)
-					continue;
+					return;
 
 				sender.sendMessage(MessageFormat.format("§c{0} §9→ §e§l{1} §9→ §a{2}", team.getHunter().getName(), team.getName(), team.getTarget().getName()));
-			}
+			});
 		}
 		else
 		{
-			for (final HuntPlayer other : Game.getPlayerList().values())
-			{
+			HuntPlayer.forEach(other -> {
 				if (!other.isAlive() || other.getTarget() == null)
-					continue;
+					return;
 
 				sender.sendMessage(MessageFormat.format("§c{0} §9→ §e§l{1} §9→ §a{2}", other.getHunter().getName(), other.getName(), other.getTarget().getName()));
-			}
+			});
 		}
 
 		return true;

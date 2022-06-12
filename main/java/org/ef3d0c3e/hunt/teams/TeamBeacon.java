@@ -1,34 +1,31 @@
 package org.ef3d0c3e.hunt.teams;
 
-import com.mojang.brigadier.Message;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;
 import org.bukkit.Location;
 import org.bukkit.entity.EnderCrystal;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
-import org.spigotmc.event.entity.EntityMountEvent;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TeamBeacon implements Listener
 {
@@ -62,16 +59,15 @@ public class TeamBeacon implements Listener
 	 */
 	private static Inventory getInventory(final HuntPlayer hp)
 	{
-		Inventory inv = Bukkit.createInventory(null, Math.min((hp.getTeam().getPlayerList().size() / 9 + 1)*9, 54), hp.getTeam().getColoredName());
+		Inventory inv = Bukkit.createInventory(null, Math.min((hp.getTeam().size() / 9 + 1)*9, 54), hp.getTeam().getColoredName());
 
-		boolean empty = true;
-		for (final HuntPlayer other : hp.getTeam().getPlayerList())
-		{
+		AtomicBoolean empty = new AtomicBoolean(true);
+		hp.getTeam().forAllPlayers(other ->  {
 			if (other.isAlive())
-				continue;
-			empty = false;
+				return;
+			empty.set(false);
 
-			ItemStack item = HuntItems.getSkull(other);
+			ItemStack item = Items.getSkull(other);
 			{
 				ItemMeta meta = item.getItemMeta();
 
@@ -84,9 +80,9 @@ public class TeamBeacon implements Listener
 				item.setItemMeta(meta);
 			}
 			inv.addItem(item);
-		}
+		});
 
-		if (empty)
+		if (empty.get())
 			return null;
 
 		return inv;
@@ -98,7 +94,7 @@ public class TeamBeacon implements Listener
 		if (ev.getRightClicked() != m_beacon ||
 			ev.getHand() == EquipmentSlot.OFF_HAND)
 			return;
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 		if (!hp.isAlive())
 			return;
 		if (ev.getPlayer().getInventory().getItemInMainHand() == null ||
@@ -124,7 +120,7 @@ public class TeamBeacon implements Listener
 	@EventHandler
 	public void onLeave(final PlayerQuitEvent ev)
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 		if (hp.getTeam() == null ||
 			!ev.getPlayer().getOpenInventory().getTitle().equals(hp.getTeam().getColoredName()) ||
 			ev.getPlayer().getOpenInventory().getItem(0) == null)
@@ -137,7 +133,7 @@ public class TeamBeacon implements Listener
 	@EventHandler
 	public void onInventoryClose(InventoryCloseEvent ev) // Refund diamond
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getPlayer());
 		if (hp.getTeam() == null ||
 			!ev.getView().getTitle().equals(hp.getTeam().getColoredName()) ||
 			ev.getView().getItem(0) == null)
@@ -149,7 +145,7 @@ public class TeamBeacon implements Listener
 	@EventHandler
 	public void onInventoryClick(InventoryClickEvent ev)
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getWhoClicked().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getWhoClicked());
 		if (!ev.getView().getTitle().equals(hp.getTeam().getColoredName()))
 			return;
 		ev.setCancelled(true);
@@ -158,7 +154,7 @@ public class TeamBeacon implements Listener
 			return;
 
 		final String clicked = ChatColor.stripColor(ev.getCurrentItem().getItemMeta().getDisplayName());
-		final HuntPlayer other = Game.getPlayer(clicked);
+		final HuntPlayer other = HuntPlayer.getPlayer(clicked);
 
 		if (PlayerInteractions.schedule(other, (h) -> { h.revive(); }) != null)
 			hp.getPlayer().sendMessage(MessageFormat.format("{0}§7 sera ressuscité dés qu'il se reconnecte.", other.getTeamColoredName()));
@@ -169,7 +165,7 @@ public class TeamBeacon implements Listener
 	@EventHandler
 	public void onInventoryDrag(InventoryDragEvent ev)
 	{
-		final HuntPlayer hp = Game.getPlayer(ev.getWhoClicked().getName());
+		final HuntPlayer hp = HuntPlayer.getPlayer((Player)ev.getWhoClicked());
 		if (!ev.getView().getTitle().equals(hp.getTeam().getColoredName()))
 			return;
 		ev.setCancelled(true);

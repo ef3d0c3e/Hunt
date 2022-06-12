@@ -60,7 +60,7 @@ public class CmdKititems
 			int j = 0;
 			int i = 0;
 			
-			for (Kit kit : KitMenu.getList())
+			for (final Kit kit : KitMenu.getKitList())
 			{
 				for (ItemStack item : kit.getItems())
 				{

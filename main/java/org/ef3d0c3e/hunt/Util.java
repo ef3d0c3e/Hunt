@@ -4,6 +4,8 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -299,12 +301,20 @@ public class Util
 	public static HuntPlayer getPlayerAttacker(EntityDamageByEntityEvent ev)
 	{
 		if (ev.getDamager() instanceof Player)
-			return Game.getPlayer(ev.getDamager().getName());
+			return HuntPlayer.getPlayer((Player)ev.getDamager());
 		else if (ev.getDamager() instanceof Projectile)
 		{
 			final ProjectileSource shooter = ((Projectile)ev.getDamager()).getShooter();
 			if (shooter instanceof Player)
-				return Game.getPlayer(((Player)shooter).getName());
+				return HuntPlayer.getPlayer(((Player)shooter).getName());
+			else
+				return null;
+		}
+		else if (ev.getDamager() instanceof Tameable)
+		{
+			final AnimalTamer owner = ((Tameable)ev.getDamager()).getOwner();
+			if (owner instanceof Player)
+				return HuntPlayer.getPlayer((Player)owner);
 			else
 				return null;
 		}
@@ -498,7 +508,7 @@ public class Util
 			return null;
 
 		if (killer instanceof Player)
-			return Game.getPlayer(killer.getName());
+			return HuntPlayer.getPlayer((Player)killer);
 
 		if (killer instanceof MehdiBee)
 			return ((MehdiBee)killer).getOwner();
@@ -509,7 +519,7 @@ public class Util
 			if (owner == null || !(owner instanceof Player))
 				return null;
 
-			return Game.getPlayer(owner.getName());
+			return HuntPlayer.getPlayer((Player)owner);
 		}
 
 		if (killer instanceof Projectile)
@@ -518,9 +528,33 @@ public class Util
 			if (shooter == null || !(shooter instanceof Player))
 				return null;
 
-			return Game.getPlayer(((Player)shooter).getName());
+			return HuntPlayer.getPlayer((Player)shooter);
 		}
 
 		return null;
+	}
+
+	public interface MessagePredicate
+	{
+		public boolean operation(final HuntPlayer hp);
+	}
+
+	/**
+	 * Messages all online player
+	 * @param msg1 First message
+	 * @param msg2 Second message
+	 * @param pred Predicate
+	 */
+	public static void messagePredicate(final String msg1, final String msg2, final MessagePredicate pred)
+	{
+		HuntPlayer.forEach(hp -> {
+			if (!hp.isOnline())
+				return;
+
+			if (pred.operation(hp))
+				hp.getPlayer().sendMessage(msg1);
+			else
+				hp.getPlayer().sendMessage(msg2);
+		});
 	}
 }

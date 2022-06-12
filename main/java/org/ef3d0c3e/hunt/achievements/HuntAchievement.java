@@ -9,8 +9,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.ef3d0c3e.hunt.Hunt;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
+import org.ef3d0c3e.hunt.Items;
 
 import eu.endercentral.crazy_advancements.advancement.Advancement;
 import eu.endercentral.crazy_advancements.advancement.AdvancementDisplay;
@@ -23,48 +24,48 @@ import net.md_5.bungee.api.chat.TextComponent;
 
 public enum HuntAchievement
 {
-	HUNT("minecraft:textures/block/stone.png", HuntItems.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.TASK, 1, "Hunt", "Les achievements du Hunt!"),
-	PLAY_1(HUNT, -1, 0, HuntItems.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.TASK, 1, "Bizuth", "Joue au moins 1 partie."),
-	PLAY_5(PLAY_1, -2, 0, HuntItems.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.TASK, 5, "L1", "Habitué du hunt, joue 5 parties."),
-	PLAY_10(PLAY_5, -3, 0, HuntItems.createAdvancementItem(Material.GOLD_BLOCK, 0, false), AdvancementFrame.CHALLENGE, 10, "L2", "Tu n'as pas raté ta L1, bravo! Joue au moins 10 parties."),
+	HUNT("minecraft:textures/block/stone.png", Items.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.TASK, 1, "Hunt", "Les achievements du Hunt!"),
+	PLAY_1(HUNT, -1, 0, Items.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.TASK, 1, "Bizuth", "Joue au moins 1 partie."),
+	PLAY_5(PLAY_1, -2, 0, Items.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.TASK, 5, "L1", "Habitué du hunt, joue 5 parties."),
+	PLAY_10(PLAY_5, -3, 0, Items.createAdvancementItem(Material.GOLD_BLOCK, 0, false), AdvancementFrame.CHALLENGE, 10, "L2", "Tu n'as pas raté ta L1, bravo! Joue au moins 10 parties."),
 
-	DIAMOND_1(HUNT, -1, -1, HuntItems.createAdvancementItem(Material.DIAMOND, 0, false), AdvancementFrame.TASK, 1, "Moulaga!", "Obtient au moins une fois un diamant."),
-	DIAMOND_10(DIAMOND_1, -2, -1, HuntItems.createAdvancementItem(Material.DIAMOND_CHESTPLATE, 0, false), AdvancementFrame.TASK, 10, "Diamants", "Obtient 10 diamants en tout."),
-	DIAMOND_10_ONCE(DIAMOND_10, -4, -1, HuntItems.createAdvancementItem(Material.DIAMOND_BLOCK, 0, false), AdvancementFrame.TASK, 10, "X-Ray", "Obtient 10 diamants en une partie."),
+	DIAMOND_1(HUNT, -1, -1, Items.createAdvancementItem(Material.DIAMOND, 0, false), AdvancementFrame.TASK, 1, "Moulaga!", "Obtient au moins une fois un diamant."),
+	DIAMOND_10(DIAMOND_1, -2, -1, Items.createAdvancementItem(Material.DIAMOND_CHESTPLATE, 0, false), AdvancementFrame.TASK, 10, "Diamants", "Obtient 10 diamants en tout."),
+	DIAMOND_10_ONCE(DIAMOND_10, -4, -1, Items.createAdvancementItem(Material.DIAMOND_BLOCK, 0, false), AdvancementFrame.TASK, 10, "X-Ray", "Obtient 10 diamants en une partie."),
 
-	VAMPIRE_KILL(HUNT, 1, 2, HuntItems.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.CHALLENGE, 1, "Tueur de vampire", "Tue Jean-Baptiste sans que sa malédiction ne te tue."),
-	VAMPIRE_REVIVE(HUNT, 1, 3, HuntItems.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.GOAL, 1, "Dracula", "Résuscite après avoir été tué entant que Jean-Baptiste."),
+	VAMPIRE_KILL(HUNT, 1, 2, Items.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.CHALLENGE, 1, "Tueur de vampire", "Tue Jean-Baptiste sans que sa malédiction ne te tue."),
+	VAMPIRE_REVIVE(HUNT, 1, 3, Items.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.GOAL, 1, "Dracula", "Résuscite après avoir été tué entant que Jean-Baptiste."),
 
 
 	// Gets awarded when player starts or win game (in kit's hooks)
-	PLAY_ESTEBAN(HUNT, 1, -2, HuntItems.createAdvancementItem(Material.DIRT, 0, false), AdvancementFrame.TASK, 1, "Estéban", "Joue une partie avec le kit Estéban."),
-	WIN_ESTEBAN(PLAY_ESTEBAN, 2, -2, HuntItems.createAdvancementItem(Material.DIRT, 0, false), AdvancementFrame.CHALLENGE, 1, "Immunisé à l'alcool", "Gagne une partie avec le kit Estéban."),
-	PLAY_MEHDI(HUNT, 1, -3, HuntItems.createAdvancementItem(Material.HONEYCOMB, 0, false), AdvancementFrame.TASK, 1, "Mehdi", "Joue une partie avec le kit Mehdi."),
-	WIN_MEHDI(PLAY_MEHDI, 2, -3, HuntItems.createAdvancementItem(Material.HONEYCOMB, 0, false), AdvancementFrame.CHALLENGE, 1, "Maître du Karma", "Gagne une partie avec le kit Mehdi."),
-	PLAY_JB(HUNT, 1, -4, HuntItems.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.TASK, 1, "Jean-Baptiste", "Joue une partie avec le kit Jean-Baptiste."),
-	WIN_JB(PLAY_JB, 2, -4, HuntItems.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.CHALLENGE, 1, "Guérit de la covid", "Gagne une partie avec le kit Jean-Baptiste."),
-	PLAY_BAPTISTE(HUNT, 1, -5, HuntItems.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.TASK, 1, "Baptiste", "Joue une partie avec le kit Baptiste."),
-	WIN_BAPTISTE(PLAY_BAPTISTE, 2, -5, HuntItems.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.CHALLENGE, 1, "Majorant", "Gagne une partie avec le kit Baptiste."),
-	PLAY_LINO(HUNT, 1, -6, HuntItems.createAdvancementItem(Material.CROSSBOW, 0, false), AdvancementFrame.TASK, 1, "Lino", "Joue une partie avec le kit Lino."),
-	WIN_LINO(PLAY_LINO, 2, -6, HuntItems.createAdvancementItem(Material.CROSSBOW, 0, false), AdvancementFrame.CHALLENGE, 1, "FC Chômeur", "Gagne une partie avec le kit Lino."),
-	PLAY_JULIEN(HUNT, 1, -7, HuntItems.createAdvancementItem(Material.COBBLESTONE, 0, false), AdvancementFrame.TASK, 1, "Julien", "Joue une partie avec le kit Julien."),
-	WIN_JULIEN(PLAY_JULIEN, 2, -7, HuntItems.createAdvancementItem(Material.COBBLESTONE, 0, false), AdvancementFrame.CHALLENGE, 1, "גולם", "Gagne une partie avec le kit Julien."),
-	PLAY_KELIAN(HUNT, 1, -8, HuntItems.createAdvancementItem(Material.HEART_OF_THE_SEA, 0, false), AdvancementFrame.TASK, 1, "Kélian", "Joue une partie avec le kit Kélian."),
-	WIN_KELIAN(PLAY_KELIAN, 2, -8, HuntItems.createAdvancementItem(Material.HEART_OF_THE_SEA, 0, false), AdvancementFrame.CHALLENGE, 1, "Breton", "Gagne une partie avec le kit Kélian."),
-	PLAY_THOMAS(HUNT, 1, -9, HuntItems.createAdvancementItem(Material.ENDER_EYE, 0, false), AdvancementFrame.TASK, 1, "Thomas", "Joue une partie avec le kit Thomas."),
-	WIN_THOMAS(PLAY_THOMAS, 2, -9, HuntItems.createAdvancementItem(Material.ENDER_EYE, 0, false), AdvancementFrame.CHALLENGE, 1, "Maire de Levallois", "Gagne une partie avec le kit Thomas."),
-	PLAY_ENZO(HUNT, 1, -10, HuntItems.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.TASK, 1, "Enzo", "Joue une partie avec le kit Enzo."),
-	WIN_ENZO(PLAY_ENZO, 2, -10, HuntItems.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.CHALLENGE, 1, "La chance", "Gagne une partie avec le kit Enzo."),
-	PLAY_TOM(HUNT, 1, -11, HuntItems.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.TASK, 1, "Tom", "Joue une partie avec le kit Tom."),
-	WIN_TOM(PLAY_TOM, 2, -11, HuntItems.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.CHALLENGE, 1, "Chicha", "Gagne une partie avec le kit Tom."),
-	PLAY_FLAVIEN(HUNT, 1, -12, HuntItems.createAdvancementItem(Material.ELYTRA, 0, false), AdvancementFrame.TASK, 1, "Flavien", "Joue une partie avec le kit Flavien."),
-	WIN_FLAVIEN(PLAY_FLAVIEN, 2, -12, HuntItems.createAdvancementItem(Material.ELYTRA, 0, false), AdvancementFrame.CHALLENGE, 1, "Charro", "Gagne une partie avec le kit Flavien."),
-	PLAY_BK(HUNT, 1, -13, HuntItems.createAdvancementItem(Material.SUGAR, 0, false), AdvancementFrame.TASK, 1, "BlueKatss", "Joue une partie avec le kit BlueKatss."),
-	WIN_BK(PLAY_BK, 2, -13, HuntItems.createAdvancementItem(Material.SUGAR, 0, false), AdvancementFrame.CHALLENGE, 1, "Prend de la C", "Gagne une partie avec le kit BlueKatss."),
-	PLAY_LANCZOS(HUNT, 1, -14, HuntItems.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.TASK, 1, "Lanczos", "Joue une partie avec le kit Lanczos."),
-	WIN_LANCZOS(PLAY_LANCZOS, 2, -14, HuntItems.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.CHALLENGE, 1, "Rollback salvateur", "Gagne une partie avec le kit Lanczos."),
-	PLAY_HASAGI(HUNT, 1, -15, HuntItems.createAdvancementItem(Material.NETHERITE_SWORD, 0, false), AdvancementFrame.TASK, 1, "Hasagi", "Joue une partie avec le kit Hasagi."),
-	WIN_HASAGI(PLAY_HASAGI, 2, -15, HuntItems.createAdvancementItem(Material.NETHERITE_SWORD, 0, false), AdvancementFrame.CHALLENGE, 1, "Aseryo", "Gagne une partie avec le kit Hasagi."),
+	PLAY_ESTEBAN(HUNT, 1, -2, Items.createAdvancementItem(Material.DIRT, 0, false), AdvancementFrame.TASK, 1, "Estéban", "Joue une partie avec le kit Estéban."),
+	WIN_ESTEBAN(PLAY_ESTEBAN, 2, -2, Items.createAdvancementItem(Material.DIRT, 0, false), AdvancementFrame.CHALLENGE, 1, "Immunisé à l'alcool", "Gagne une partie avec le kit Estéban."),
+	PLAY_MEHDI(HUNT, 1, -3, Items.createAdvancementItem(Material.HONEYCOMB, 0, false), AdvancementFrame.TASK, 1, "Mehdi", "Joue une partie avec le kit Mehdi."),
+	WIN_MEHDI(PLAY_MEHDI, 2, -3, Items.createAdvancementItem(Material.HONEYCOMB, 0, false), AdvancementFrame.CHALLENGE, 1, "Maître du Karma", "Gagne une partie avec le kit Mehdi."),
+	PLAY_JB(HUNT, 1, -4, Items.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.TASK, 1, "Jean-Baptiste", "Joue une partie avec le kit Jean-Baptiste."),
+	WIN_JB(PLAY_JB, 2, -4, Items.createAdvancementItem(Material.WITHER_ROSE, 0, false), AdvancementFrame.CHALLENGE, 1, "Guérit de la covid", "Gagne une partie avec le kit Jean-Baptiste."),
+	PLAY_BAPTISTE(HUNT, 1, -5, Items.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.TASK, 1, "Baptiste", "Joue une partie avec le kit Baptiste."),
+	WIN_BAPTISTE(PLAY_BAPTISTE, 2, -5, Items.createAdvancementItem(Material.SPECTRAL_ARROW, 0, false), AdvancementFrame.CHALLENGE, 1, "Majorant", "Gagne une partie avec le kit Baptiste."),
+	PLAY_LINO(HUNT, 1, -6, Items.createAdvancementItem(Material.CROSSBOW, 0, false), AdvancementFrame.TASK, 1, "Lino", "Joue une partie avec le kit Lino."),
+	WIN_LINO(PLAY_LINO, 2, -6, Items.createAdvancementItem(Material.CROSSBOW, 0, false), AdvancementFrame.CHALLENGE, 1, "FC Chômeur", "Gagne une partie avec le kit Lino."),
+	PLAY_JULIEN(HUNT, 1, -7, Items.createAdvancementItem(Material.COBBLESTONE, 0, false), AdvancementFrame.TASK, 1, "Julien", "Joue une partie avec le kit Julien."),
+	WIN_JULIEN(PLAY_JULIEN, 2, -7, Items.createAdvancementItem(Material.COBBLESTONE, 0, false), AdvancementFrame.CHALLENGE, 1, "גולם", "Gagne une partie avec le kit Julien."),
+	PLAY_KELIAN(HUNT, 1, -8, Items.createAdvancementItem(Material.HEART_OF_THE_SEA, 0, false), AdvancementFrame.TASK, 1, "Kélian", "Joue une partie avec le kit Kélian."),
+	WIN_KELIAN(PLAY_KELIAN, 2, -8, Items.createAdvancementItem(Material.HEART_OF_THE_SEA, 0, false), AdvancementFrame.CHALLENGE, 1, "Breton", "Gagne une partie avec le kit Kélian."),
+	PLAY_THOMAS(HUNT, 1, -9, Items.createAdvancementItem(Material.ENDER_EYE, 0, false), AdvancementFrame.TASK, 1, "Thomas", "Joue une partie avec le kit Thomas."),
+	WIN_THOMAS(PLAY_THOMAS, 2, -9, Items.createAdvancementItem(Material.ENDER_EYE, 0, false), AdvancementFrame.CHALLENGE, 1, "Maire de Levallois", "Gagne une partie avec le kit Thomas."),
+	PLAY_ENZO(HUNT, 1, -10, Items.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.TASK, 1, "Enzo", "Joue une partie avec le kit Enzo."),
+	WIN_ENZO(PLAY_ENZO, 2, -10, Items.createAdvancementItem(Material.GOLDEN_APPLE, 0, false), AdvancementFrame.CHALLENGE, 1, "La chance", "Gagne une partie avec le kit Enzo."),
+	PLAY_TOM(HUNT, 1, -11, Items.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.TASK, 1, "Tom", "Joue une partie avec le kit Tom."),
+	WIN_TOM(PLAY_TOM, 2, -11, Items.createAdvancementItem(Material.COMPASS, 0, false), AdvancementFrame.CHALLENGE, 1, "Chicha", "Gagne une partie avec le kit Tom."),
+	PLAY_FLAVIEN(HUNT, 1, -12, Items.createAdvancementItem(Material.ELYTRA, 0, false), AdvancementFrame.TASK, 1, "Flavien", "Joue une partie avec le kit Flavien."),
+	WIN_FLAVIEN(PLAY_FLAVIEN, 2, -12, Items.createAdvancementItem(Material.ELYTRA, 0, false), AdvancementFrame.CHALLENGE, 1, "Charro", "Gagne une partie avec le kit Flavien."),
+	PLAY_BK(HUNT, 1, -13, Items.createAdvancementItem(Material.SUGAR, 0, false), AdvancementFrame.TASK, 1, "BlueKatss", "Joue une partie avec le kit BlueKatss."),
+	WIN_BK(PLAY_BK, 2, -13, Items.createAdvancementItem(Material.SUGAR, 0, false), AdvancementFrame.CHALLENGE, 1, "Prend de la C", "Gagne une partie avec le kit BlueKatss."),
+	PLAY_LANCZOS(HUNT, 1, -14, Items.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.TASK, 1, "Lanczos", "Joue une partie avec le kit Lanczos."),
+	WIN_LANCZOS(PLAY_LANCZOS, 2, -14, Items.createAdvancementItem(Material.CLOCK, 0, false), AdvancementFrame.CHALLENGE, 1, "Rollback salvateur", "Gagne une partie avec le kit Lanczos."),
+	PLAY_HASAGI(HUNT, 1, -15, Items.createAdvancementItem(Material.NETHERITE_SWORD, 0, false), AdvancementFrame.TASK, 1, "Hasagi", "Joue une partie avec le kit Hasagi."),
+	WIN_HASAGI(PLAY_HASAGI, 2, -15, Items.createAdvancementItem(Material.NETHERITE_SWORD, 0, false), AdvancementFrame.CHALLENGE, 1, "Aseryo", "Gagne une partie avec le kit Hasagi."),
 	;
 	private static AdvancementManager manager;
 	private static SaveFile m_save = null; // TODO
@@ -172,7 +173,7 @@ public enum HuntAchievement
 
 	public static void onStart()
 	{
-		Bukkit.getPluginManager().registerEvents(new AchievementEvents(), Game.getPlugin());
+		Bukkit.getPluginManager().registerEvents(new AchievementEvents(), Hunt.plugin);
 	}
 
 	public static SaveFile getSave()

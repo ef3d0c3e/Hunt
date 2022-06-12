@@ -4,7 +4,6 @@ import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -18,14 +17,9 @@ import org.bukkit.inventory.meta.*;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.ef3d0c3e.hunt.Normal;
-import org.ef3d0c3e.hunt.Pair;
-import org.ef3d0c3e.hunt.Round;
-import org.ef3d0c3e.hunt.Util;
-import org.ef3d0c3e.hunt.achievements.HuntAchievement;
+import org.ef3d0c3e.hunt.*;
 import org.ef3d0c3e.hunt.events.GameStartEvent;
 import org.ef3d0c3e.hunt.game.Game;
-import org.ef3d0c3e.hunt.items.HuntItems;
 import org.ef3d0c3e.hunt.player.HuntPlayer;
 import org.ef3d0c3e.hunt.player.PlayerInteractions;
 
@@ -47,7 +41,7 @@ public class KitEnzo extends Kit
 	@Override
 	public ItemStack getDisplayItem()
 	{
-		return HuntItems.createGuiItem(Material.GOLDEN_APPLE, 0, Kit.itemColor + getDisplayName(),
+		return Items.createGuiItem(Material.GOLDEN_APPLE, 0, Kit.itemColor + getDisplayName(),
 			Kit.itemLoreColor + "╸ Fait tourner la roue de la fortune",
 			Kit.itemLoreColor + " et obtient des items ou des effets"
 		);
@@ -114,11 +108,11 @@ public class KitEnzo extends Kit
 
 	static public EnzoReward[] getRewards()
 	{
-		final EnzoReward diamond = new EnzoItemReward(HuntItems.createGuiItem(Material.DIAMOND, 0, "§bDiamant!"),
+		final EnzoReward diamond = new EnzoItemReward(Items.createGuiItem(Material.DIAMOND, 0, "§bDiamant!"),
 			new ItemStack[] { new ItemStack(Material.DIAMOND, 2) });
-		final EnzoReward iron = new EnzoItemReward(HuntItems.createGuiItem(Material.IRON_INGOT, 0, "§bFer"),
+		final EnzoReward iron = new EnzoItemReward(Items.createGuiItem(Material.IRON_INGOT, 0, "§bFer"),
 			new ItemStack[] { new ItemStack(Material.IRON_INGOT, 6) });
-		final EnzoReward ironTools = new EnzoItemReward(HuntItems.createGuiItem(Material.IRON_PICKAXE, 0, "§aOutils en Fer"),
+		final EnzoReward ironTools = new EnzoItemReward(Items.createGuiItem(Material.IRON_PICKAXE, 0, "§aOutils en Fer"),
 			new ItemStack[] { new ItemStack(Material.IRON_PICKAXE, 1), new ItemStack(Material.IRON_SHOVEL, 1), new ItemStack(Material.IRON_AXE, 1) });
 		final ItemStack fastPick = new ItemStack(Material.GOLDEN_PICKAXE, 1);
 		{
@@ -128,7 +122,7 @@ public class KitEnzo extends Kit
 			meta.addEnchant(Enchantment.DURABILITY, 3, true);
 			fastPick.setItemMeta(meta);
 		}
-		final EnzoReward fastTool = new EnzoItemReward(HuntItems.createGuiItem(Material.GOLDEN_PICKAXE, 0, "§ePioche RAPIDE!!!"),
+		final EnzoReward fastTool = new EnzoItemReward(Items.createGuiItem(Material.GOLDEN_PICKAXE, 0, "§ePioche RAPIDE!!!"),
 			new ItemStack[] { fastPick });
 		final ItemStack luckPick = new ItemStack(Material.IRON_PICKAXE);
 		{
@@ -139,11 +133,11 @@ public class KitEnzo extends Kit
 			meta.addEnchant(Enchantment.LOOT_BONUS_BLOCKS, 3, true);
 			luckPick.setItemMeta(meta);
 		}
-		final EnzoReward luckTool = new EnzoItemReward(HuntItems.createGuiItem(Material.GOLDEN_PICKAXE, 0, "§2Pioche CHANCEUSE!!!"),
+		final EnzoReward luckTool = new EnzoItemReward(Items.createGuiItem(Material.GOLDEN_PICKAXE, 0, "§2Pioche CHANCEUSE!!!"),
 			new ItemStack[] { luckPick });
-		final EnzoReward tnt = new EnzoItemReward(HuntItems.createGuiItem(Material.TNT, 0, "§cExplosifs"),
+		final EnzoReward tnt = new EnzoItemReward(Items.createGuiItem(Material.TNT, 0, "§cExplosifs"),
 			new ItemStack[] { new ItemStack(Material.TNT, 12) });
-		final EnzoReward gapple = new EnzoItemReward(HuntItems.createGuiItem(Material.GOLDEN_APPLE, 0, "§ePommes d'Or"),
+		final EnzoReward gapple = new EnzoItemReward(Items.createGuiItem(Material.GOLDEN_APPLE, 0, "§ePommes d'Or"),
 			new ItemStack[] { new ItemStack(Material.GOLDEN_APPLE, 4) });
 		final ItemStack tridentItem = new ItemStack(Material.TRIDENT);
 		{
@@ -153,7 +147,7 @@ public class KitEnzo extends Kit
 			meta.addEnchant(Enchantment.IMPALING, 3, true);
 			tridentItem.setItemMeta(meta);
 		}
-		final EnzoReward trident = new EnzoItemReward(HuntItems.createGuiItem(Material.TRIDENT, 0, "§3Trident"),
+		final EnzoReward trident = new EnzoItemReward(Items.createGuiItem(Material.TRIDENT, 0, "§3Trident"),
 			new ItemStack[] { tridentItem });
 		final ItemStack kelianChestplateItem = new ItemStack(Material.LEATHER_CHESTPLATE);
 		{
@@ -165,11 +159,11 @@ public class KitEnzo extends Kit
 			meta.setColor(Color.RED);
 			kelianChestplateItem.setItemMeta(meta);
 		}
-		final EnzoReward kelianChestplate = new EnzoItemReward(HuntItems.createGuiItem(Material.LEATHER_CHESTPLATE, 0, "§cPlastron de Kélian"),
+		final EnzoReward kelianChestplate = new EnzoItemReward(Items.createGuiItem(Material.LEATHER_CHESTPLATE, 0, "§cPlastron de Kélian"),
 			new ItemStack[] { kelianChestplateItem });
-		final EnzoReward elytra = new EnzoItemReward(HuntItems.createGuiItem(Material.ELYTRA, 0, "§5Elytra"),
+		final EnzoReward elytra = new EnzoItemReward(Items.createGuiItem(Material.ELYTRA, 0, "§5Elytra"),
 			new ItemStack[] { new ItemStack(Material.ELYTRA) });
-		final EnzoReward exp = new EnzoItemReward(HuntItems.createGuiItem(Material.EXPERIENCE_BOTTLE, 0, "§eXP"),
+		final EnzoReward exp = new EnzoItemReward(Items.createGuiItem(Material.EXPERIENCE_BOTTLE, 0, "§eXP"),
 			new ItemStack[] { new ItemStack(Material.EXPERIENCE_BOTTLE, 12) });
 		final ItemStack crossbowAmmo = new ItemStack(Material.FIREWORK_ROCKET, 6);
 		{
@@ -189,34 +183,34 @@ public class KitEnzo extends Kit
 			((Damageable)meta).setDamage(445);
 			crossbowItem.setItemMeta(meta);
 		}
-		final EnzoReward crossbow = new EnzoItemReward(HuntItems.createGuiItem(Material.CROSSBOW, 0, "§6Super Arbalète"),
+		final EnzoReward crossbow = new EnzoItemReward(Items.createGuiItem(Material.CROSSBOW, 0, "§6Super Arbalète"),
 			new ItemStack[] { crossbowAmmo, crossbowItem });
-		final EnzoReward obsidian = new EnzoItemReward(HuntItems.createGuiItem(Material.OBSIDIAN, 0, "§5Obsidian"),
+		final EnzoReward obsidian = new EnzoItemReward(Items.createGuiItem(Material.OBSIDIAN, 0, "§5Obsidian"),
 			new ItemStack[] { new ItemStack(Material.OBSIDIAN, 24) });
-		final EnzoReward carrot = new EnzoItemReward(HuntItems.createGuiItem(Material.GOLDEN_CARROT, 0, "§eCarottes Dorées"),
+		final EnzoReward carrot = new EnzoItemReward(Items.createGuiItem(Material.GOLDEN_CARROT, 0, "§eCarottes Dorées"),
 			new ItemStack[] { new ItemStack(Material.GOLDEN_CARROT, 12) });
-		final EnzoReward cookedBeef = new EnzoItemReward(HuntItems.createGuiItem(Material.COOKED_BEEF, 0, "§cBoeuf"),
+		final EnzoReward cookedBeef = new EnzoItemReward(Items.createGuiItem(Material.COOKED_BEEF, 0, "§cBoeuf"),
 			new ItemStack[] { new ItemStack(Material.COOKED_BEEF, 16) });
-		final EnzoReward bones = new EnzoItemReward(HuntItems.createGuiItem(Material.BONE, 0, "§7Loups"),
+		final EnzoReward bones = new EnzoItemReward(Items.createGuiItem(Material.BONE, 0, "§7Loups"),
 			new ItemStack[] { new ItemStack(Material.BONE, 16), new ItemStack(Material.WOLF_SPAWN_EGG, 3) });
 
-		final EnzoReward speed1Effect = new EnzoEffectReward(HuntItems.createGuiItem(Material.SUGAR, 0, "§bVitesse"),
+		final EnzoReward speed1Effect = new EnzoEffectReward(Items.createGuiItem(Material.SUGAR, 0, "§bVitesse"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.SPEED, 20*60*3, 0) });
-		final EnzoReward speed2Effect = new EnzoEffectReward(HuntItems.createGuiItem(Material.SUGAR, 0, "§bSuper Vitesse"),
+		final EnzoReward speed2Effect = new EnzoEffectReward(Items.createGuiItem(Material.SUGAR, 0, "§bSuper Vitesse"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.SPEED, 20*60, 1) });
-		final EnzoReward jumpEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.RABBIT_FOOT, 0, "§dJump Boost"),
+		final EnzoReward jumpEffect = new EnzoEffectReward(Items.createGuiItem(Material.RABBIT_FOOT, 0, "§dJump Boost"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.JUMP, 20*60*2, 1) });
-		final EnzoReward resistEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.SHIELD, 0, "§dResistance"),
+		final EnzoReward resistEffect = new EnzoEffectReward(Items.createGuiItem(Material.SHIELD, 0, "§dResistance"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20*60*1, 0) });
-		final EnzoReward strengthEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.BLAZE_POWDER, 0, "§cStrength"),
+		final EnzoReward strengthEffect = new EnzoEffectReward(Items.createGuiItem(Material.BLAZE_POWDER, 0, "§cStrength"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 20*25, 0) });
-		final EnzoReward invisibilityEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.GLASS, 0, "§7Invisibility"),
+		final EnzoReward invisibilityEffect = new EnzoEffectReward(Items.createGuiItem(Material.GLASS, 0, "§7Invisibility"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.INVISIBILITY, 20*60*2, 0) });
-		final EnzoReward slowFallingEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.FEATHER, 0, "§8Slow Falling"),
+		final EnzoReward slowFallingEffect = new EnzoEffectReward(Items.createGuiItem(Material.FEATHER, 0, "§8Slow Falling"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.SLOW_FALLING, 20*60*8, 0) });
-		final EnzoReward waterBreathingEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.PUFFERFISH, 0, "§1Water Breathing"),
+		final EnzoReward waterBreathingEffect = new EnzoEffectReward(Items.createGuiItem(Material.PUFFERFISH, 0, "§1Water Breathing"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.WATER_BREATHING, 20*60*15, 0) });
-		final EnzoReward fireResistanceEffect = new EnzoEffectReward(HuntItems.createGuiItem(Material.LAVA_BUCKET, 0, "§6Fire Resistance"),
+		final EnzoReward fireResistanceEffect = new EnzoEffectReward(Items.createGuiItem(Material.LAVA_BUCKET, 0, "§6Fire Resistance"),
 			new PotionEffect[] { new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 20*60*12, 0) });
 
 		return new EnzoReward[]
@@ -241,7 +235,7 @@ public class KitEnzo extends Kit
 				return;
 			if (ev.getItem() == null || !ev.getItem().isSimilar(KitEnzo.keyItem))
 				return;
-			final HuntPlayer hp = Game.getPlayer(ev.getPlayer().getName());
+			final HuntPlayer hp = HuntPlayer.getPlayer(ev.getPlayer());
 			if (hp.getKit() == null || !(hp.getKit() instanceof KitEnzo))
 				return;
 
@@ -266,10 +260,10 @@ public class KitEnzo extends Kit
 					if (time == 0)
 					{
 						for (int i = 0; i < 9; ++i)
-							inv.setItem(i, HuntItems.createGuiItem(Material.GREEN_STAINED_GLASS_PANE, 0, "§0"));
+							inv.setItem(i, Items.createGuiItem(Material.GREEN_STAINED_GLASS_PANE, 0, "§0"));
 						for (int i = 18; i < 27; ++i)
-							inv.setItem(i, HuntItems.createGuiItem(Material.GREEN_STAINED_GLASS_PANE, 0, "§0"));
-						inv.setItem(22, HuntItems.createGuiItem(Material.END_ROD, 0, "§0"));
+							inv.setItem(i, Items.createGuiItem(Material.GREEN_STAINED_GLASS_PANE, 0, "§0"));
+						inv.setItem(22, Items.createGuiItem(Material.END_ROD, 0, "§0"));
 
 						hp.getPlayer().openInventory(inv);
 					}
@@ -299,7 +293,7 @@ public class KitEnzo extends Kit
 					++time;
 				}
 
-			}.runTaskTimer(Game.getPlugin(), 0, 1);
+			}.runTaskTimer(Hunt.plugin, 0, 1);
 		}
 
 
@@ -360,20 +354,18 @@ public class KitEnzo extends Kit
 					// Increase reward
 					if (secs == 0 && mins != 0 && mins % 4 == 0)
 					{
-						for (HuntPlayer hp : Game.getPlayerList().values())
-						{
+						HuntPlayer.forEach(hp -> {
 							if (!hp.isAlive() || hp.getKit() == null || !(hp.getKit() instanceof KitEnzo))
-								continue;
+								return;
 
 							++((KitEnzo)hp.getKit()).pendingRewards;
-						}
+						});
 					}
 
 					// Give keys
-					for (HuntPlayer hp : Game.getPlayerList().values())
-					{
+					HuntPlayer.forEach(hp ->{
 						if (!hp.isOnline() || !hp.isAlive() || hp.getKit() == null || !(hp.getKit() instanceof KitEnzo))
-							continue;
+							return;
 
 						final KitEnzo kit = (KitEnzo) hp.getKit();
 						if (kit.pendingRewards != 0)
@@ -383,9 +375,9 @@ public class KitEnzo extends Kit
 							PlayerInteractions.giveItem(hp, new ItemStack[] { KitEnzo.keyItem }, true, true);
 							--kit.pendingRewards;
 						}
-					}
+					});
 				}
-			}.runTaskTimer(Game.getPlugin(), 0, 200);
+			}.runTaskTimer(Hunt.plugin, 0, 200);
 		}
 	}
 }
